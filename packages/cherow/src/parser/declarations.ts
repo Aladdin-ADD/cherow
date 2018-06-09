@@ -1,21 +1,11 @@
-import * as ESTree from '../estree';
+import { FunctionDeclaration } from './../estree';
+import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
-import { Errors, tolerant } from '../errors';
-import { parseBindingIdentifierOrPattern, parseBindingIdentifier } from './pattern';
-import { parseAssignmentExpression, parseFormalListAndBody, parseClassBodyAndElementList, parseLeftHandSideExpression, parseDecorators } from './expressions';
-import { Parser, Location } from '../types';
-import {
-  expect,
-  Context,
-  finishNode,
-  consume,
-  getLocation,
-  ModifierState,
-  swapContext,
-  ObjectState,
-  parseExpressionCoverGrammar,
-  isInOrOf
-} from '../utilities';
+import * as ESTree from '../estree';
+import { parseClassBodyAndElementList, parsePropertyName, parseIdentifier, parseLeftHandSideExpression, parseAssignmentExpression, parseFormalListAndBody } from './expressions';
+import { Context, Flags, BindingType, BindingOrigin, ModifierState, expect, consume, swapContext, setContext } from '../common';
+import { parseDelimitedBindingList, parseBindingIdentifier } from './pattern';
+import { recordErrors, Errors } from '../errors';
 
 // Declarations
 
@@ -27,35 +17,26 @@ import {
  * @param parser  Parser object
  * @param context Context masks
  */
-export function parseClassDeclaration(parser: Parser, context: Context): ESTree.ClassDeclaration {
-    const pos = getLocation(parser);
-    let decorators: ESTree.Decorator[] = [];
-    if (context & Context.OptionsExperimental) decorators = parseDecorators(parser, context);
-    expect(parser, context | Context.DisallowEscapedKeyword, Token.ClassKeyword);
-    const id = (context & Context.RequireIdentifier && (parser.token !== Token.Identifier))
-        ? null :
-        parseBindingIdentifier(parser, context | Context.Strict | Context.DisallowEscapedKeyword);
-    let state = ObjectState.None;
+export function parseClassDeclaration(parser: Parser, context: Context): any {
+    context = context | Context.Strict;
+    expect(parser, context, Token.ClassKeyword);
+    let id: ESTree.Identifier | null = null;
+    if ((parser.token & Token.Identifier) === Token.Identifier || parser.token & Token.Keyword && parser.token !== Token.ExtendsKeyword) {
+        id = parseBindingIdentifier(parser, context);
+    } else if (!(context & Context.RequireIdentifier)) recordErrors(parser, context, Errors.UnNamedFunctionDecl);
     let superClass: ESTree.Expression | null = null;
     if (consume(parser, context, Token.ExtendsKeyword)) {
-        superClass = parseLeftHandSideExpression(parser, context | Context.Strict, pos);
-        state |= ObjectState.Heritage;
+        superClass = parseLeftHandSideExpression(parser, context | Context.Strict);
     }
 
-    const body = parseClassBodyAndElementList(parser, context & ~Context.RequireIdentifier | Context.Strict | Context.InClass, state);
+    const body = parseClassBodyAndElementList(parser, context);
 
-    return finishNode(context, parser, pos, context & Context.OptionsExperimental ? {
-        type: 'ClassDeclaration',
-        id,
-        superClass,
-        body,
-        decorators
-    } : {
+    return {
         type: 'ClassDeclaration',
         id,
         superClass,
         body
-    });
+    };
 }
 
 /**
@@ -66,76 +47,28 @@ export function parseClassDeclaration(parser: Parser, context: Context): ESTree.
  * @param parser  Parser object
  * @param context Context masks
  */
-export function parseFunctionDeclaration(parser: Parser, context: Context): ESTree.FunctionDeclaration {
-    const pos = getLocation(parser);
-    expect(parser, context, Token.FunctionKeyword);
-    let isGenerator = ModifierState.None;
-    if (consume(parser, context, Token.Multiply)) {
-        if (context & Context.AllowSingleStatement && !(context & Context.InFunctionBody)) {
-            tolerant(parser, context, Errors.GeneratorInSingleStatementContext);
-        }
-
-        isGenerator = ModifierState.Generator;
-    }
-    return parseFunctionDeclarationBody(parser, context, isGenerator, pos);
-}
-
-/**
- * Parses out a function declartion body
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncFunctionDeclaration)
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncGeneratorDeclaration)
- *
- * @param parser Parser object
- * @param context Context mask
- * @param state Modifier state
- * @param pos Current location
- */
-function parseFunctionDeclarationBody(
-  parser: Parser,
-  context: Context,
-  state: ModifierState,
-  pos: Location
+export function parseFunctionDeclaration(
+    parser: Parser,
+    context: Context,
+    state: ModifierState = ModifierState.None
 ): ESTree.FunctionDeclaration {
-  const { token } = parser;
-  let id: ESTree.Identifier | undefined | null = null;
-  if (context & Context.Yield && token & Token.IsYield) tolerant(parser, context, Errors.YieldBindingIdentifier);
-  if (context & Context.Async && token & Token.IsAwait) tolerant(parser, context, Errors.AwaitBindingIdentifier);
-  if (token !== Token.LeftParen) {
-      id = parseBindingIdentifier(parser, context);
-      // Unnamed functions are forbidden in statement context.
-  } else if (!(context & Context.RequireIdentifier)) tolerant(parser, context, Errors.UnNamedFunctionDecl);
-  const {
-      params,
-      body
-  } = swapContext(parser, context & ~(Context.Method | Context.AllowSuperProperty | Context.RequireIdentifier), state, parseFormalListAndBody);
-  return finishNode(context, parser, pos, {
-      type: 'FunctionDeclaration',
-      params,
-      body,
-      async: !!(state & ModifierState.Await),
-      generator: !!(state & ModifierState.Generator),
-      expression: false,
-      id,
-  });
-}
-
-/**
- * Parses async function or async generator declaration
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncFunctionDeclaration)
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncGeneratorDeclaration)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-export function parseAsyncFunctionOrAsyncGeneratorDeclaration(parser: Parser, context: Context): ESTree.FunctionDeclaration {
-    const pos = getLocation(parser);
-    expect(parser, context, Token.AsyncKeyword);
     expect(parser, context, Token.FunctionKeyword);
-    const isAwait = ModifierState.Await;
-    const isGenerator = consume(parser, context, Token.Multiply) ? ModifierState.Generator : ModifierState.None;
-    return parseFunctionDeclarationBody(parser, context, isGenerator | isAwait, pos);
+    if (consume(parser, context, Token.Multiply)) state |= ModifierState.Generator;
+    let id: ESTree.Identifier | null = null;
+    if (parser.token !== Token.LeftParen) {
+        id = parseBindingIdentifier(parser, context);
+    } else if (!(context & Context.RequireIdentifier)) recordErrors(parser, context, Errors.UnNamedFunctionDecl);
+    context = swapContext(context, state);
+    const { params, body } = parseFormalListAndBody(parser, context);
+    return {
+        type: 'FunctionDeclaration',
+        body,
+        params,
+        async: !!(state & ModifierState.Async),
+        generator: !!(state & ModifierState.Generator),
+        expression: false,
+        id
+    };
 }
 
 /**
@@ -153,50 +86,24 @@ export function parseAsyncFunctionOrAsyncGeneratorDeclaration(parser: Parser, co
  * @param parser  Parser object
  * @param context Context masks
  */
-
-function parseVariableDeclaration(parser: Parser, context: Context, isConst: boolean): ESTree.VariableDeclarator {
-
-    const pos = getLocation(parser);
-    const isBindingPattern = (parser.token & Token.IsBindingPattern) !== 0;
-    const id = parseBindingIdentifierOrPattern(parser, context);
-
-    let init: ESTree.Expression | null = null;
-
-    if (consume(parser, context | Context.DisallowEscapedKeyword, Token.Assign)) {
-        init = parseExpressionCoverGrammar(parser, context & ~(Context.BlockScope | Context.ForStatement), parseAssignmentExpression);
-        if (isInOrOf(parser.token) && (context & Context.ForStatement || isBindingPattern)) {
-            if (parser.token === Token.InKeyword) {
-                // https://github.com/tc39/test262/blob/master/test/annexB/language/statements/for-in/strict-initializer.js
-                if (context & (Context.BlockScope | Context.Strict | Context.Async) || isBindingPattern) {
-                    tolerant(parser, context, Errors.ForInOfLoopInitializer, tokenDesc(parser.token));
-                }
-            } else tolerant(parser, context, Errors.ForInOfLoopInitializer, tokenDesc(parser.token));
-        }
-        // Note: Initializers are required for 'const' and binding patterns
-    } else if (!isInOrOf(parser.token) && (isConst || isBindingPattern)) {
-        tolerant(parser, context, Errors.DeclarationMissingInitializer, isConst ? 'const' : 'destructuring');
-    }
-    return finishNode(context, parser, pos, {
+export function parseVariableDeclaration(
+    id: any,
+    init: any
+): ESTree.VariableDeclarator {
+    return {
         type: 'VariableDeclarator',
         init,
         id,
-    });
+    };
 }
 
-/**
- * Parses variable declaration list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-VariableDeclarationList)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-
-export function parseVariableDeclarationList(parser: Parser, context: Context, isConst: boolean): ESTree.VariableDeclarator[] {
-    const list: ESTree.VariableDeclarator[] = [parseVariableDeclaration(parser, context, isConst)];
-    while (consume(parser, context, Token.Comma)) list.push(parseVariableDeclaration(parser, context, isConst));
-    if (context & Context.ForStatement && isInOrOf(parser.token) && list.length !== 1) {
-        tolerant(parser, context, Errors.ForInOfLoopMultiBindings, tokenDesc(parser.token));
-    }
+export function parseVariableDeclarationList(
+    parser: Parser,
+    context: Context,
+    type: BindingType,
+    origin: BindingOrigin
+): any {
+    const list: ESTree.VariableDeclarator[] = [];
+    parseDelimitedBindingList(parser, context, type, origin, list);
     return list;
 }

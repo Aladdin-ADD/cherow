@@ -1,9 +1,13 @@
-import * as ESTree from '../estree';
 import { Token } from '../token';
-import { Options, Location, Parser } from '../types';
-import { parseStatementListItem, parseDirective } from './statements';
+import { Context, Flags, LabelState } from '../common';
+import { Parser, ErrorCallBack, Options } from '../types';
+import * as ESTree from '../estree';
+import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
-import { Context, Flags, nextToken } from '../utilities';
+import { Chars } from '../chars';
+import { consumeOpt, RegexpState } from '../lexer/common';
+import { verifyRegExpPattern } from '../lexer/regexp';
+import { Errors, recordErrors, } from '../errors';
 
 /**
  * Creates the parser object
@@ -11,13 +15,10 @@ import { Context, Flags, nextToken } from '../utilities';
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export function createParser(
-    source: string,
-    sourceFile: string | void,
-): Parser {
+export function createParserObject(source: string, errCallback?: ErrorCallBack): Parser {
     return {
         // The source code to parse
-        source,
+        source: source,
         // Source length
         length: source.length,
         // Current position
@@ -38,22 +39,27 @@ export function createParser(
         lastColumn: 0,
         // End line position after current token
         lastLine: 0,
-        // Pending cover grammar errors
-        pendingExpressionError: undefined,
-        // Mutable parser flags. Allows destructuring by default.
-        flags: Flags.AllowDestructuring,
-        // The tokens
-        token: Token.EndOfSource,
-        // Misc
-        tokenRaw: '',
-        lastValue: 0,
-        comments: [],
-        sourceFile,
-        tokenRegExp: undefined,
-        tokenValue: undefined,
+        // Mutable parser flags. Allows destructuring by default
+        flags: Flags.Assignable,
+        // Tokenizing
+        tokens: [],
+        // Label tracking
         labelSet: undefined,
-        errorLocation: undefined,
-        errors: [],
+        labelSetStack: [],
+        iterationStack: [],
+        labelDepth: 0,
+        switchStatement: LabelState.Empty,
+        iterationStatement: LabelState.Empty,
+        functionBoundaryStack: undefined,
+        // Regular expression
+        capturingParens: 0,
+        largestBackReference: 0,
+        // Misc
+        token: Token.EndOfSource,
+        tokenValue: undefined,
+        tokenRaw: '',
+        tokenRegExp: undefined,
+        onError: errCallback,
     };
 }
 
@@ -64,110 +70,60 @@ export function createParser(
  * @param options The parser options
  * @param context Context masks
  */
-export function parseSource(source: string, options: Options | void, /*@internal*/ context: Context): ESTree.Program {
+export function parseSource(
+    source: string,
+    options: Options | void,
+    /*@internal*/
+    context: Context,
+    errCallback?: any): ESTree.Program {
+    let sourceFile: string = '';
+    if (options !== undefined) {
+        // The flag to enable module syntax support
+        if (options.module) context |= Context.Module;
+        // The flag to enable stage 3 support (ESNext)
+        if (options.next) context |= Context.OptionsNext;
+        // The flag to enable React JSX parsing
+        if (options.jsx) context |= Context.OptionsJSX;
+        // The flag to enable start and end offsets to each node
+        if (options.ranges) context |= Context.OptionsRanges;
+        // The flag to enable line/column location information to each node
+        if (options.loc) context |= Context.OptionsLoc;
+        // The flag to attach raw property to each literal node
+        if (options.raw) context |= Context.OptionsRaw;
+        // Attach raw property to each identifier node
+        if (options.rawIdentifier) context |= Context.OptionsRawidentifiers;
+        // The flag to allow return in the global scope
+        if (options.globalReturn) context |= Context.OptionsGlobalReturn;
+        // The flag to allow to skip shebang - '#'
+        if (options.skipShebang) context |= Context.OptionsShebang;
+        // Set to true to record the source file in every node's loc object when the loc option is set.
+        if (!!options.source) sourceFile = options.source;
+        // Create a top-level comments array containing all comments
+        if (!!options.comments) context |= Context.OptionsComments;
+        // The flag to enable implied strict mode
+        if (options.impliedStrict) context |= Context.Strict;
+        // The flag to enable experimental features
+        if (options.experimental) context |= Context.OptionsExperimental;
+        // The flag to set to bypass methods in Node
+        if (options.node) context |= Context.OptionsNode;
+        // The flag to enable tokenizing
+        if (options.tokenize) context |= Context.OptionsTokenize;
+        // The flag to enable web compat (annexB)
+        if (options.webcompat) context |= Context.OptionsWebCompat;
+        // The flag to enable editor mode
+        if (options.edit) context |= Context.OptionsEditorMode;
+    }
 
-  let sourceFile: string = '';
+    // Create the parser object
+    const parser = createParserObject(source, errCallback);
+    const body = (context & Context.Module) === Context.Module ?
+    parseModuleItemList(parser, context) : parseStatementList(parser, context);
 
-  if (!!options) {
-      // The flag to enable module syntax support
-      if (options.module) context |= Context.Module;
-      // The flag to enable stage 3 support (ESNext)
-      if (options.next) context |= Context.OptionsNext;
-      // The flag to enable React JSX parsing
-      if (options.jsx) context |= Context.OptionsJSX;
-      // The flag to enable start and end offsets to each node
-      if (options.ranges) context |= Context.OptionsRanges;
-      // The flag to enable line/column location information to each node
-      if (options.loc) context |= Context.OptionsLoc;
-      // The flag to attach raw property to each literal node
-      if (options.raw) context |= Context.OptionsRaw;
-      // Attach raw property to each identifier node
-      if (options.rawIdentifier) context |= Context.OptionsRawidentifiers;
-      // The flag to allow return in the global scope
-      if (options.globalReturn) context |= Context.OptionsGlobalReturn;
-      // The flag to allow to skip shebang - '#'
-      if (options.skipShebang) context |= Context.OptionsShebang;
-      // Enable tolerant mode
-      if (options.tolerant) context |= Context.OptionsTolerant;
-      // Set to true to record the source file in every node's loc object when the loc option is set.
-      if (!!options.source) sourceFile = options.source;
-      // Create a top-level comments array containing all comments
-      if (!!options.comments) context |= Context.OptionsComments;
-      // The flag to enable implied strict mode
-      if (options.impliedStrict) context |= Context.Strict;
-      // The flag to enable experimental features
-      if (options.experimental) context |= Context.OptionsExperimental;
-      // The flag to set to bypass methods in Node
-      if (options.node) context |= Context.OptionsNode;
-      // Accepts a callback function to be invoked for each syntax node (as the node is constructed)
-  }
-
-  const parser = createParser(source, sourceFile);
-
-  const body = context & Context.Module ?
-      parseModuleItemList(parser, context) :
-      parseStatementList(parser, context);
-
-  const node: ESTree.Program = {
-      type: 'Program',
-      sourceType: context & Context.Module ? 'module' : 'script',
-      body: body as any,
-  };
-
-  if (context & Context.LocationTracker) {
-
-      if (context & Context.OptionsRanges) {
-          node.start = 0;
-          node.end = source.length;
-      }
-
-      if (context & Context.OptionsLoc) {
-
-          node.loc = {
-              start: { line: 1, column: 0 },
-              end: { line: parser.line, column: parser.column
-              }
-          };
-
-          if (sourceFile) node.loc.source = sourceFile;
-      }
-  }
-
-  if (context & Context.OptionsComments) node.comments = parser.comments;
-
-  if (context & Context.OptionsTolerant) node.errors = parser.errors;
-
-  return node;
-}
-
-/**
- * Parse statement list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-StatementList)
- *
- * @param Parser instance
- * @param Context masks
- */
-
-export function parseStatementList(parser: Parser, context: Context): ESTree.Statement[] {
-  const statements: ESTree.Statement[] = [];
-  let hasProlog = true; // Parsing directive prologue.
-  // prime the scanner
-  nextToken(parser, context | Context.DisallowEscapedKeyword);
-
-  while (parser.token !== Token.EndOfSource) {
-      if (hasProlog && parser.token !== Token.StringLiteral) hasProlog = false;
-      if (hasProlog) {
-          if (!(context & Context.Strict) && parser.tokenRaw.length === 12 && parser.tokenValue === 'use strict') {
-              context |= Context.Strict;
-          }
-          statements.push(parseDirective(parser, context));
-      } else {
-          statements.push(parseStatementListItem(parser, context));
-      }
-  }
-
-  return statements;
+    return {
+        type: 'Program',
+        sourceType: context & Context.Module ? 'module' : 'script',
+        body: body as ESTree.Statement[],
+    };
 }
 
 /**
@@ -179,10 +135,10 @@ export function parseStatementList(parser: Parser, context: Context): ESTree.Sta
  * @param source source code to parse
  * @param options parser options
  */
-export function parse(source: string, options?: Options): ESTree.Program {
-  return options && options.module
-    ? parseModule(source, options)
-    : parseScript(source, options);
+export function parse(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
+    return options && options.module ?
+        parseModule(source, options, errCallback) :
+        parseScript(source, options, errCallback);
 }
 
 /**
@@ -193,8 +149,8 @@ export function parse(source: string, options?: Options): ESTree.Program {
  * @param source source code to parse
  * @param options parser options
  */
-export function parseScript(source: string, options?: Options): ESTree.Program {
-  return parseSource(source, options, Context.Empty);
+export function parseScript(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
+    return parseSource(source, options, Context.Empty, errCallback);
 }
 
 /**
@@ -205,6 +161,32 @@ export function parseScript(source: string, options?: Options): ESTree.Program {
  * @param source source code to parse
  * @param options parser options
  */
-export function parseModule(source: string, options?: Options): ESTree.Program {
-  return parseSource(source, options, Context.Strict | Context.Module);
+export function parseModule(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
+    return parseSource(source, options, Context.Strict | Context.Module, errCallback);
+}
+
+/**
+ * Validate regular expressions
+ *
+ * @see [Link](https://tc39.github.io/ecma262/#sec-modules)
+ *
+ * @param source source code to parse
+ * @param options parser options
+ */
+export function validateRegExp(source: string, options?: Options, errCallback?: ErrorCallBack): boolean {
+    // Create the parser object
+    const parser = createParserObject(source, errCallback);
+
+    let context = Context.Empty;
+
+    if (options !== undefined) {
+        // The flag to enable editor mode
+        if (options.edit) context |= Context.OptionsEditorMode;
+
+    }
+
+    if (!consumeOpt(parser, Chars.Slash)) recordErrors(parser, context, Errors.InvalidRegularExp);
+    const { state } = verifyRegExpPattern(parser, context);
+    if (state === RegexpState.Invalid) recordErrors(parser, context, Errors.InvalidRegularExp);
+    return (state === RegexpState.Valid) ? true : false;
 }

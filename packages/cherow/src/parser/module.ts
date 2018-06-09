@@ -1,47 +1,37 @@
 import * as ESTree from '../estree';
+import { AssignmentProperty } from './../estree';
+import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
-import { Errors, report, tolerant } from '../errors';
-import { Location, Parser } from '../types';
-import { parseBindingIdentifier } from './pattern';
-import { parseStatementListItem, parseVariableStatement, parseDirective } from './statements';
-import { parseIdentifierName, parseLiteral,  parseIdentifier,  parseAssignmentExpression, parseDecorators } from './expressions';
-import { parseClassDeclaration, parseFunctionDeclaration,  parseAsyncFunctionOrAsyncGeneratorDeclaration } from './declarations';
+import { parseAssignmentPattern, parseDelimitedBindingList, parseBindingIdentifier } from './pattern';
+import { parseStatementListItem, parseDirective, parseVariableStatement } from './statements';
+import { parseClassDeclaration, parseFunctionDeclaration } from './declarations';
+import { parseAssignmentExpression, parseLiteral, parseIdentifier } from './expressions';
+import { Errors, recordErrors, } from '../errors';
 import {
     expect,
     Context,
-    finishNode,
     nextToken,
     consume,
-    getLocation,
     consumeSemicolon,
     lookahead,
     nextTokenIsFuncKeywordOnSameLine,
     nextTokenIsLeftParenOrPeriod,
-    setPendingError,
-    hasBit,
-} from '../utilities';
+    ModifierState,
+    BindingOrigin,
+    BindingType,
+    parseIdentifierName
+} from '../common';
 
-// 15.2 Modules
-
-/**
- * Parse module item list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-ModuleItemList)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-export function parseModuleItemList(parser: Parser, context: Context): (ReturnType<typeof parseDirective | typeof parseModuleItem>)[] {
-
+export function parseModuleItemList(parser: Parser, context: Context) {
     // Prime the scanner
     nextToken(parser, context);
 
-    const statements: (ReturnType<typeof parseDirective | typeof parseModuleItem>)[] = [];
+    const statements: any[] = [];
 
     while (parser.token !== Token.EndOfSource) {
-        statements.push(parser.token === Token.StringLiteral ?
+        statements.push((parser.token & Token.StringLiteral) === Token.StringLiteral ?
             parseDirective(parser, context) :
-            parseModuleItem(parser, context | Context.AllowIn));
+            parseModuleItem(parser, context));
     }
 
     return statements;
@@ -55,19 +45,15 @@ export function parseModuleItemList(parser: Parser, context: Context): (ReturnTy
  * @param parser  Parser object
  * @param context Context masks
  */
-export function parseModuleItem(parser: Parser, context: Context): ReturnType<
-  | typeof parseDecorators
-  | typeof parseExportDeclaration
-  | typeof parseImportDeclaration
-  | typeof parseStatementListItem
-  > {
+export function parseModuleItem(parser: Parser, context: Context): any {
+
     switch (parser.token) {
 
         // @decorator
         case Token.At:
-            return parseDecorators(parser, context);
+            //  return parseDecorators(parser, context);
 
-        // ExportDeclaration
+            // ExportDeclaration
         case Token.ExportKeyword:
             return parseExportDeclaration(parser, context);
 
@@ -91,29 +77,35 @@ export function parseModuleItem(parser: Parser, context: Context): ReturnType<
  * @param parser  Parser object
  * @param context Context masks
  */
-export function parseExportDeclaration(parser: Parser, context: Context): ESTree.ExportAllDeclaration | ESTree.ExportNamedDeclaration | ESTree.ExportDefaultDeclaration {
-
-    const pos = getLocation(parser);
+export function parseExportDeclaration(parser: Parser, context: Context): any {
+    // ExportDeclaration:
+    // export * FromClause;
+    // export ExportClause FromClause;
+    // export VariableStatement
+    // export Declaration
+    // export HoistableDeclaration
+    // export ClassDeclaration
+    // export AssignmentExpression
     const specifiers: ESTree.ExportSpecifier[] = [];
 
     let source: ESTree.Literal | null = null;
     let declaration: ESTree.Statement | null = null;
 
-    expect(parser, context | Context.DisallowEscapedKeyword, Token.ExportKeyword);
+    expect(parser, context, Token.ExportKeyword);
 
     switch (parser.token) {
 
-        // export * FromClause ;
         case Token.Multiply:
-            return parseExportAllDeclaration(parser, context, pos);
+            // export * from 'foo';
+            return parseExportAllDeclaration(parser, context);
 
         case Token.DefaultKeyword:
-            return parseExportDefault(parser, context, pos);
+            return parseExportDefault(parser, context);
 
         case Token.LeftBrace:
             {
-                // export ExportClause FromClause ;
-                // export ExportClause ;
+                // export {}
+                // export {} from 'foo'
                 expect(parser, context, Token.LeftBrace);
 
                 let hasReservedWord = false;
@@ -121,63 +113,79 @@ export function parseExportDeclaration(parser: Parser, context: Context): ESTree
                 while (parser.token !== Token.RightBrace) {
                     if (parser.token & Token.Reserved) {
                         hasReservedWord = true;
-                        setPendingError(parser);
                     }
                     specifiers.push(parseNamedExportDeclaration(parser, context));
                     if (parser.token !== Token.RightBrace) expect(parser, context, Token.Comma);
                 }
 
-                expect(parser, context | Context.DisallowEscapedKeyword, Token.RightBrace);
+                expect(parser, context, Token.RightBrace);
 
                 if (parser.token === Token.FromKeyword) {
                     source = parseModuleSpecifier(parser, context);
-                //  The left hand side can't be a keyword where there is no
-                // 'from' keyword since it references a local binding.
-                } else if (hasReservedWord) tolerant(parser, context, Errors.UnexpectedReserved);
+                    //  The left hand side can't be a keyword where there is no
+                    // 'from' keyword since it references a local binding.
+                } else if (hasReservedWord) recordErrors(parser, context, Errors.UnexpectedReserved);
 
                 consumeSemicolon(parser, context);
 
                 break;
             }
-
-            // export ClassDeclaration
         case Token.ClassKeyword:
+            // export class foo {}
             declaration = (parseClassDeclaration(parser, context));
             break;
 
-            // export LexicalDeclaration
         case Token.LetKeyword:
-        case Token.ConstKeyword:
-            declaration = parseVariableStatement(parser, context | Context.BlockScope);
+            // export let z = 0;
+            // export let x
+            declaration = parseVariableStatement(parser, context, BindingType.Let, BindingOrigin.Export);
             break;
 
-          // export VariableDeclaration
+        case Token.ConstKeyword:
+            // export const z = 0;
+            // export const x
+            declaration = parseVariableStatement(parser, context, BindingType.Const, BindingOrigin.Export);
+            break;
+
         case Token.VarKeyword:
-            declaration = parseVariableStatement(parser, context);
+            // export var ariya = 123;
+            // export var a, b, c;
+            declaration = parseVariableStatement(parser, context, BindingType.Var, BindingOrigin.Export);
             break;
 
             // export HoistableDeclaration
         case Token.FunctionKeyword:
+            // export function foo () {}
+            // export function () {}
+            // export function *foo() {}
+            // export function *() {}
             declaration = parseFunctionDeclaration(parser, context);
             break;
 
-            // export HoistableDeclaration
         case Token.AsyncKeyword:
-            if (lookahead(parser, context, nextTokenIsFuncKeywordOnSameLine)) {
-                declaration = parseAsyncFunctionOrAsyncGeneratorDeclaration(parser, context);
+            // export async function *foo () {}
+            // export async function foo () {}
+            // export async function *() {}
+            // export async function f(){}
+            // export async function(){}
+            // export async () => y
+            // export async (x) => y
+            // export async x => y
+            if (lookahead(parser, context, nextTokenIsFuncKeywordOnSameLine, false)) {
+                declaration = parseFunctionDeclaration(parser, context, ModifierState.Async);
                 break;
             }
             // Falls through
         default:
-            report(parser, Errors.UnexpectedToken, tokenDesc(parser.token));
+            recordErrors(parser, context, Errors.UnexpectedToken, tokenDesc(parser.token));
     }
 
-    return finishNode(context, parser, pos, {
+    return {
         type: 'ExportNamedDeclaration',
         source,
         specifiers,
         declaration,
-    });
+    };
 }
 
 /**
@@ -186,14 +194,14 @@ export function parseExportDeclaration(parser: Parser, context: Context): ESTree
  * @param parser  Parser object
  * @param context Context masks
  */
-function parseExportAllDeclaration(parser: Parser, context: Context, pos: Location): ESTree.ExportAllDeclaration {
+function parseExportAllDeclaration(parser: Parser, context: Context): ESTree.ExportAllDeclaration {
     expect(parser, context, Token.Multiply);
     const source = parseModuleSpecifier(parser, context);
     consumeSemicolon(parser, context);
-    return finishNode(context, parser, pos, {
+    return {
         type: 'ExportAllDeclaration',
         source,
-    });
+    };
 }
 
 /**
@@ -203,19 +211,18 @@ function parseExportAllDeclaration(parser: Parser, context: Context, pos: Locati
  * @param context Context masks
  */
 function parseNamedExportDeclaration(parser: Parser, context: Context): ESTree.ExportSpecifier {
-    const pos = getLocation(parser);
     // ExportSpecifier :
     // IdentifierName
     // IdentifierName as IdentifierName
-    const local = parseIdentifierName(parser, context | Context.DisallowEscapedKeyword, parser.token);
-    const exported = consume(parser, context, Token.AsKeyword)
-        ? parseIdentifierName(parser, context, parser.token)
-        : local;
-    return finishNode(context, parser, pos, {
+    const local = parseIdentifierName(parser, context, parser.token);
+    const exported = consume(parser, context, Token.AsKeyword) ?
+        parseIdentifierName(parser, context, parser.token) :
+        local;
+    return {
         type: 'ExportSpecifier',
         local,
         exported,
-    });
+    };
 }
 
 /**
@@ -229,9 +236,9 @@ function parseNamedExportDeclaration(parser: Parser, context: Context): ESTree.E
  * @param context Context masks
  * @param pos Location
  */
-function parseExportDefault(parser: Parser, context: Context, pos: Location): ESTree.ExportDefaultDeclaration {
+function parseExportDefault(parser: Parser, context: Context): ESTree.ExportDefaultDeclaration {
 
-    expect(parser, context | Context.DisallowEscapedKeyword, Token.DefaultKeyword);
+    expect(parser, context, Token.DefaultKeyword);
 
     let declaration: ESTree.FunctionDeclaration | ESTree.ClassDeclaration | ESTree.Expression;
 
@@ -246,7 +253,7 @@ function parseExportDefault(parser: Parser, context: Context, pos: Location): ES
             // export default  @decl ClassDeclaration[Default]
         case Token.At:
         case Token.ClassKeyword:
-            declaration = parseClassDeclaration(parser, context & ~Context.AllowIn | Context.RequireIdentifier);
+            declaration = parseClassDeclaration(parser, context | Context.RequireIdentifier);
             break;
 
             // export default HoistableDeclaration[Default]
@@ -255,15 +262,16 @@ function parseExportDefault(parser: Parser, context: Context, pos: Location): ES
             break;
 
         default:
-           // export default [lookahead ∉ {function, class}] AssignmentExpression[In] ;
-            declaration = parseAssignmentExpression(parser, context | Context.AllowIn);
+            // export default [lookahead ∉ {function, class}] AssignmentExpression[In] ;
+            declaration = parseAssignmentExpression(parser, context);
+
             consumeSemicolon(parser, context);
     }
 
-    return finishNode(context, parser, pos, {
+    return {
         type: 'ExportDefaultDeclaration',
         declaration,
-    });
+    };
 }
 
 /**
@@ -275,84 +283,46 @@ function parseExportDefault(parser: Parser, context: Context, pos: Location): ES
  * @param context Context masks
  */
 export function parseImportDeclaration(parser: Parser, context: Context): ESTree.ImportDeclaration {
-
-    const pos = getLocation(parser);
-
     expect(parser, context, Token.ImportKeyword);
 
     let source: ESTree.Literal;
-    let specifiers: ESTree.Specifiers[] = [];
+    const specifiers: ESTree.Specifiers[] = [];
 
     // 'import' ModuleSpecifier ';'
-    if (parser.token === Token.StringLiteral) {
+    if ((parser.token & Token.Identifier) === Token.Identifier) {
+
+        specifiers.push(parseImportDefaultSpecifier(parser, context));
+
+        if (consume(parser, context, Token.Comma)) {
+            if (parser.token === Token.Multiply) {
+                parseNameSpaceImport(parser, context, specifiers);
+            } else if (parser.token === Token.LeftBrace) {
+                parseNamedImports(parser, context, specifiers);
+            } else recordErrors(parser, context, Errors.UnexpectedToken, tokenDesc(parser.token));
+        }
+
+        source = parseModuleSpecifier(parser, context);
+
+        // 'import' ModuleSpecifier ';'
+    } else if ((parser.token & Token.StringLiteral) === Token.StringLiteral) {
         source = parseLiteral(parser, context);
     } else {
-        specifiers = parseImportClause(parser, context | Context.DisallowEscapedKeyword);
+        if (parser.token === Token.Multiply) {
+            parseNameSpaceImport(parser, context, specifiers);
+        } else if (parser.token === Token.LeftBrace) {
+            parseNamedImports(parser, context, specifiers);
+        } else recordErrors(parser, context, Errors.UnexpectedToken, tokenDesc(parser.token));
+
         source = parseModuleSpecifier(parser, context);
     }
 
     consumeSemicolon(parser, context);
 
-    return finishNode(context, parser, pos, {
+    return {
         type: 'ImportDeclaration',
         specifiers,
         source,
-    });
-}
-
-/**
- * Parse import clause
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-ImportClause)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-
-function parseImportClause(parser: Parser, context: Context): ESTree.Specifiers[] {
-
-    const specifiers: ESTree.Specifiers[] = [];
-
-    switch (parser.token) {
-
-        // 'import' ModuleSpecifier ';'
-        case Token.Identifier:
-            {
-                specifiers.push(parseImportDefaultSpecifier(parser, context));
-
-                if (consume(parser, context, Token.Comma)) {
-
-                    switch (parser.token) {
-                        // import a, * as foo
-                        case Token.Multiply:
-                            parseNameSpaceImport(parser, context, specifiers);
-                            break;
-                            // import a, {bar}
-                        case Token.LeftBrace:
-                            parseNamedImports(parser, context, specifiers);
-                            break;
-                        default:
-                            tolerant(parser, context, Errors.UnexpectedToken, tokenDesc(parser.token));
-                    }
-                }
-
-                break;
-            }
-
-            // import {bar}
-        case Token.LeftBrace:
-            parseNamedImports(parser, context, specifiers);
-            break;
-
-            // import * as foo
-        case Token.Multiply:
-            parseNameSpaceImport(parser, context, specifiers);
-            break;
-
-        default:
-            report(parser, Errors.UnexpectedToken, tokenDesc(parser.token));
-    }
-    return specifiers;
+    };
 }
 
 /**
@@ -387,27 +357,27 @@ function parseNamedImports(parser: Parser, context: Context, specifiers: ESTree.
 
 function parseImportSpecifier(parser: Parser, context: Context): ESTree.ImportSpecifier {
 
-    const pos = getLocation(parser);
-    const { token } = parser;
-    const imported = parseIdentifierName(parser, context | Context.DisallowEscapedKeyword, token);
+    const {
+        token
+    } = parser;
+    const imported = parseIdentifierName(parser, context, parser.token);
 
     let local: ESTree.Identifier;
 
     if (consume(parser, context, Token.AsKeyword)) {
         local = parseBindingIdentifier(parser, context);
     } else {
-         // An import name that is a keyword is a syntax error if it is not followed
-         // by the keyword 'as'.
-        if (hasBit(token, Token.Reserved)) tolerant(parser, context, Errors.UnexpectedReserved);
-        if (hasBit(token, Token.IsEvalOrArguments)) tolerant(parser, context, Errors.StrictEvalArguments);
+        // An import name that is a keyword is a syntax error if it is not followed
+        // by the keyword 'as'.
+        if ((token & Token.Reserved) === Token.Reserved) recordErrors(parser, context, Errors.Unexpected);
         local = imported;
     }
 
-    return finishNode(context, parser, pos, {
+    return {
         type: 'ImportSpecifier',
         local,
         imported,
-    });
+    };
 }
 
 /**
@@ -422,14 +392,13 @@ function parseImportSpecifier(parser: Parser, context: Context): ESTree.ImportSp
 function parseNameSpaceImport(parser: Parser, context: Context, specifiers: ESTree.Specifiers[]): void {
     // NameSpaceImport:
     //  * as ImportedBinding
-    const pos = getLocation(parser);
     expect(parser, context, Token.Multiply);
     expect(parser, context, Token.AsKeyword, Errors.AsAfterImportStart);
     const local = parseBindingIdentifier(parser, context);
-    specifiers.push(finishNode(context, parser, pos, {
+    specifiers.push({
         type: 'ImportNamespaceSpecifier',
         local,
-    }));
+    });
 }
 
 /**
@@ -444,7 +413,9 @@ function parseModuleSpecifier(parser: Parser, context: Context): ESTree.Literal 
     // ModuleSpecifier :
     //   StringLiteral
     expect(parser, context, Token.FromKeyword);
-    if (parser.token !== Token.StringLiteral) report(parser, Errors.UnexpectedToken, tokenDesc(parser.token));
+    if ((parser.token & Token.StringLiteral) !== Token.StringLiteral) {
+        recordErrors(parser, context, Errors.UnexpectedToken, tokenDesc(parser.token));
+    }
     return parseLiteral(parser, context);
 }
 
@@ -455,10 +426,10 @@ function parseModuleSpecifier(parser: Parser, context: Context): ESTree.Literal 
  * @param context Context masks
  */
 function parseImportDefaultSpecifier(parser: Parser, context: Context): ESTree.ImportDefaultSpecifier {
-    return finishNode(context, parser, getLocation(parser), {
+    return {
         type: 'ImportDefaultSpecifier',
         local: parseIdentifier(parser, context),
-    });
+    };
 }
 
 /**
@@ -472,10 +443,10 @@ function parseImportDefaultSpecifier(parser: Parser, context: Context): ESTree.I
  * @param context Context masks
  */
 function parseAsyncFunctionOrAssignmentExpression(
-  parser: Parser,
-  context: Context
+    parser: Parser,
+    context: Context
 ): ESTree.FunctionDeclaration | ESTree.AssignmentExpression {
-    return lookahead(parser, context, nextTokenIsFuncKeywordOnSameLine) ?
-        parseAsyncFunctionOrAsyncGeneratorDeclaration(parser, context | Context.RequireIdentifier) :
-        parseAssignmentExpression(parser, context | Context.AllowIn) as any;
+    return lookahead(parser, context, nextTokenIsFuncKeywordOnSameLine, false) ?
+        parseFunctionDeclaration(parser, context | Context.RequireIdentifier, ModifierState.Async) :
+        parseAssignmentExpression(parser, context) as any;
 }
