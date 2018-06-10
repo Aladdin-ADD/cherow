@@ -1,13 +1,13 @@
+import { Context } from '../common';
+import { Parser, ErrorCallBack, Options } from '../types';
 import * as ESTree from '../estree';
-import { Options, Parser } from '../types';
-import { Context } from '../utilities';
 /**
  * Creates the parser object
  *
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export declare function createParser(source: string, sourceFile: string | void): Parser;
+export declare function createParserObject(source: string, errCallback?: ErrorCallBack): Parser;
 /**
  * Creating the parser
  *
@@ -15,16 +15,7 @@ export declare function createParser(source: string, sourceFile: string | void):
  * @param options The parser options
  * @param context Context masks
  */
-export declare function parseSource(source: string, options: Options | void, /*@internal*/ context: Context): ESTree.Program;
-/**
- * Parse statement list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-StatementList)
- *
- * @param Parser instance
- * @param Context masks
- */
-export declare function parseStatementList(parser: Parser, context: Context): ESTree.Statement[];
+export declare function parseSource(source: string, options: Options | void, context: Context, errCallback?: any): ESTree.Program;
 /**
  * Parse either script code or module code
  *
@@ -34,7 +25,7 @@ export declare function parseStatementList(parser: Parser, context: Context): ES
  * @param source source code to parse
  * @param options parser options
  */
-export declare function parse(source: string, options?: Options): ESTree.Program;
+export declare function parse(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program;
 /**
  * Parse script code
  *
@@ -43,7 +34,7 @@ export declare function parse(source: string, options?: Options): ESTree.Program
  * @param source source code to parse
  * @param options parser options
  */
-export declare function parseScript(source: string, options?: Options): ESTree.Program;
+export declare function parseScript(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program;
 /**
  * Parse module code
  *
@@ -52,4 +43,13 @@ export declare function parseScript(source: string, options?: Options): ESTree.P
  * @param source source code to parse
  * @param options parser options
  */
-export declare function parseModule(source: string, options?: Options): ESTree.Program;
+export declare function parseModule(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program;
+/**
+ * Validate regular expressions
+ *
+ * @see [Link](https://tc39.github.io/ecma262/#sec-modules)
+ *
+ * @param source source code to parse
+ * @param options parser options
+ */
+export declare function validateRegExp(source: string, options?: Options, errCallback?: ErrorCallBack): boolean;

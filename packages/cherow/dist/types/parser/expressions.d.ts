@@ -1,7 +1,6 @@
+import { Parser } from '../types';
 import * as ESTree from '../estree';
-import { Token } from '../token';
-import { Location, Parser } from '../types';
-import { Context, ObjectState } from '../utilities';
+import { Context, ModifierState } from '../common';
 /**
  * Expression :
  *   AssignmentExpression
@@ -23,40 +22,8 @@ export declare function parseExpression(parser: Parser, context: Context): ESTre
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseSequenceExpression(parser: Parser, context: Context, left: ESTree.Expression, pos: Location): ESTree.SequenceExpression;
-/**
- * AssignmentExpression :
- *   ConditionalExpression
- *   YieldExpression
- *   ArrowFunction
- *   AsyncArrowFunction
- *   LeftHandSideExpression = AssignmentExpression
- *   LeftHandSideExpression AssignmentOperator AssignmentExpression
- *
- * AssignmentExpressionNoIn :
- *   ConditionalExpressionNoIn
- *   YieldExpression
- *   ArrowFunction
- *   AsyncArrowFunction
- *   LeftHandSideExpression = AssignmentExpressionNoIn
- *   LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn
- *
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AssignmentExpression)
- *
- * @param parser Parser object
- * @param context Context masks
- */
-export declare function parseAssignmentExpression(parser: Parser, context: Context): ESTree.Expression;
-/**
- * Parse assignment rest element
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AssignmentRestElement)
- *
- * @param parser Parser object
- * @param context Context masks
- */
-export declare function parseRestElement(parser: Parser, context: Context, args?: string[]): ESTree.RestElement;
+export declare function parseSequenceExpression(parser: Parser, context: Context, left: ESTree.Expression): ESTree.SequenceExpression;
+export declare function parseAssignmentExpression(parser: Parser, context: Context): any;
 /**
  * Parse left hand side expression
  *
@@ -66,24 +33,20 @@ export declare function parseRestElement(parser: Parser, context: Context, args?
  * @param Context Contextmasks
  * @param pos Location info
  */
-export declare function parseLeftHandSideExpression(parser: Parser, context: Context, pos: Location): ESTree.Expression;
+export declare function parseLeftHandSideExpression(parser: Parser, context: Context): any;
 /**
- * Parse primary expression
+ * Parse new or member expression
  *
- * @see [Link](https://tc39.github.io/ecma262/#prod-PrimaryExpression)
+ * @see [Link](https://tc39.github.io/ecma262/#prod-NewExpression)
+ * @see [Link](https://tc39.github.io/ecma262/#prod-NewExpression)
+ * @see [Link](https://tc39.github.io/ecma262/#prod-MemberExpression)
  *
- * @param Parser Parser object
- * @param Context Context masks
- */
-export declare function parsePrimaryExpression(parser: Parser, context: Context): any;
-/**
- * Parses identifier
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-Identifier)
- *
- * @param parser  Parser object
+ * @param parser Parser object
  * @param context Context masks
  */
+export declare function parseNewOrMemberExpression(parser: Parser, context: Context): any;
+export declare function parseNewTargetExpression(parser: Parser, context: Context, id: ESTree.Identifier): any;
+export declare function parsePrimaryExpression(parser: Parser, context: Context): any;
 export declare function parseIdentifier(parser: Parser, context: Context): ESTree.Identifier;
 /**
  * Parses string and number literal
@@ -103,17 +66,7 @@ export declare function parseLiteral(parser: Parser, context: Context): ESTree.L
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseBigIntLiteral(parser: Parser, context: Context): ESTree.Literal;
-/**
- * Parse identifier name
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-IdentifierName)
- *
- * @param parser Parser object
- * @param context Context masks
- * @param t token
- */
-export declare function parseIdentifierName(parser: Parser, context: Context, t: Token): ESTree.Identifier;
+export declare function parseBigIntLiteral(parser: Parser, context: Context): ESTree.BigIntLiteral;
 /**
  * Parses function expression
  *
@@ -122,34 +75,7 @@ export declare function parseIdentifierName(parser: Parser, context: Context, t:
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseFunctionExpression(parser: Parser, context: Context): ESTree.FunctionExpression;
-/**
- * Parses async function or async generator expression
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncFunctionExpression)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-export declare function parseAsyncFunctionOrAsyncGeneratorExpression(parser: Parser, context: Context): ESTree.FunctionExpression;
-/**
- * Parse property name
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-PropertyName)
- *
- * @param parser Parser object
- * @param context Context masks
- */
-export declare function parsePropertyName(parser: Parser, context: Context): ESTree.Expression;
-/**
- * Parses object literal
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-ObjectLiteral)
- *
- * @param parser Parser object
- * @param context Context masks
- */
-export declare function parseObjectLiteral(parser: Parser, context: Context): ESTree.ObjectExpression;
+export declare function parseFunctionExpression(parser: Parser, context: Context, state?: ModifierState): ESTree.FunctionExpression;
 /**
  * Parses formal parameters and function body.
  *
@@ -159,41 +85,34 @@ export declare function parseObjectLiteral(parser: Parser, context: Context): ES
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseFormalListAndBody(parser: Parser, context: Context, state: ObjectState): {
-    params: (ESTree.Identifier | ESTree.ObjectPattern | ESTree.ArrayPattern | ESTree.RestElement)[];
-    body: ESTree.BlockStatement;
-};
+export declare function parseFormalListAndBody(parser: Parser, context: Context): any;
 /**
- * Parse funciton body
+ * Parse property name
  *
- * @see [Link](https://tc39.github.io/ecma262/#prod-FunctionBody)
+ * @see [Link](https://tc39.github.io/ecma262/#prod-PropertyName)
  *
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseFunctionBody(parser: Parser, context: Context, params: any): ESTree.BlockStatement;
+export declare function parsePropertyName(parser: Parser, context: Context): any;
 /**
- * Parse formal parameters
+ * Parse computed property names
  *
- * @see [Link](https://tc39.github.io/ecma262/#prod-FormalParameters)
- *
- * @param Parser object
- * @param Context masks
- * @param Optional objectstate. Default to none
- */
-export declare function parseFormalParameters(parser: Parser, context: Context, state: ObjectState): {
-    params: (ESTree.ArrayPattern | ESTree.RestElement | ESTree.ObjectPattern | ESTree.Identifier)[];
-    args: string[];
-};
-/**
- * Parse formal parameter list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-FormalParameterList)
+ * @see [Link](https://tc39.github.io/ecma262/#prod-ComputedPropertyName)
  *
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseFormalParameterList(parser: Parser, context: Context, args: string[]): ESTree.Identifier | ESTree.ObjectPattern | ESTree.ArrayPattern | ESTree.RestElement;
+export declare function parseComputedPropertyName(parser: Parser, context: Context): ESTree.Expression;
+/**
+ * Parses class declaration
+ *
+ * @see [Link](https://tc39.github.io/ecma262/#prod-ClassDeclaration)
+ *
+ * @param parser  Parser object
+ * @param context Context masks
+ */
+export declare function parseClassExpression(parser: Parser, context: Context): any;
 /**
  * Parse class body and element list
  *
@@ -204,7 +123,7 @@ export declare function parseFormalParameterList(parser: Parser, context: Contex
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseClassBodyAndElementList(parser: Parser, context: Context, state: ObjectState): ESTree.ClassBody;
+export declare function parseClassBodyAndElementList(parser: Parser, context: Context): ESTree.ClassBody;
 /**
  * Parse class element and class public instance fields & private instance fields
  *
@@ -214,11 +133,13 @@ export declare function parseClassBodyAndElementList(parser: Parser, context: Co
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseClassElement(parser: Parser, context: Context, state: ObjectState, decorators: ESTree.Decorator[]): ESTree.MethodDefinition | ESTree.FieldDefinition;
+export declare function parseClassElement(parser: Parser, context: Context): any;
 /**
- * Parses a list of decorators
+ * Parses object literal
+ *
+ * @see [Link](https://tc39.github.io/ecma262/#prod-ObjectLiteral)
  *
  * @param parser Parser object
  * @param context Context masks
  */
-export declare function parseDecorators(parser: Parser, context: Context): ESTree.Decorator[];
+export declare function parseObjectLiteral(parser: Parser, context: Context): ESTree.ObjectExpression;

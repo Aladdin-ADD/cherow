@@ -1,17 +1,7 @@
 import * as ESTree from '../estree';
 import { Parser } from '../types';
-import { parseStatementListItem, parseDirective } from './statements';
-import { parseDecorators } from './expressions';
-import { Context } from '../utilities';
-/**
- * Parse module item list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-ModuleItemList)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-export declare function parseModuleItemList(parser: Parser, context: Context): (ReturnType<typeof parseDirective | typeof parseModuleItem>)[];
+import { Context } from '../common';
+export declare function parseModuleItemList(parser: Parser, context: Context): any[];
 /**
  * Parse module item
  *
@@ -20,7 +10,7 @@ export declare function parseModuleItemList(parser: Parser, context: Context): (
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseModuleItem(parser: Parser, context: Context): ReturnType<typeof parseDecorators | typeof parseExportDeclaration | typeof parseImportDeclaration | typeof parseStatementListItem>;
+export declare function parseModuleItem(parser: Parser, context: Context): any;
 /**
  * Parse export declaration
  *
@@ -29,7 +19,7 @@ export declare function parseModuleItem(parser: Parser, context: Context): Retur
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseExportDeclaration(parser: Parser, context: Context): ESTree.ExportAllDeclaration | ESTree.ExportNamedDeclaration | ESTree.ExportDefaultDeclaration;
+export declare function parseExportDeclaration(parser: Parser, context: Context): any;
 /**
  * Parse import declaration
  *

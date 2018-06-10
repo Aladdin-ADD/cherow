@@ -1,14 +1,9 @@
-import { Flags } from './utilities';
 import { Token } from './token';
-import * as parser from './parser/index';
+import { Flags, LabelState } from './common';
 /**
- * ForStatement types.
+ * Error callback
  */
-export declare type ForStatementType = 'ForStatement' | 'ForOfStatement' | 'ForInStatement';
-/**
- * Comment types.
- */
-export declare type CommentType = 'MultiLine' | 'SingleLine' | 'SheBang' | 'HTMLOpen' | 'HTMLClose';
+export declare type ErrorCallBack = (error: string, line: number, column: number) => void;
 /**
  * The parser options.
  */
@@ -26,46 +21,42 @@ export interface Options {
     globalReturn?: boolean;
     experimental?: boolean;
     skipShebang?: boolean;
-    tolerant?: boolean;
+    edit?: boolean;
     node?: boolean;
+    tokenize?: boolean;
+    webcompat?: boolean;
 }
-/**
- * The parser interface.
- */
 export interface Parser {
     source: string;
     length: number;
+    flags: Flags;
+    startIndex: number;
+    lastIndex: number;
     index: number;
     line: number;
-    column: number;
-    startIndex: number;
-    startColumn: number;
     startLine: number;
-    lastIndex: number;
-    lastColumn: number;
     lastLine: number;
-    pendingExpressionError: any;
-    flags: Flags;
-    sourceFile: string | void;
-    errorLocation: any;
-    labelSet: any;
-    comments: any;
+    column: number;
+    startColumn: number;
+    lastColumn: number;
+    token: Token;
     tokenValue: any;
     tokenRaw: string;
-    lastValue: number;
-    tokenRegExp: any;
-    token: Token;
-    errors: any[];
-}
-export declare const Parser: {
-    [P in keyof typeof parser]: typeof parser[P];
-};
-/**
- *  Line / column location
- *
- */
-export interface Location {
-    index: number;
-    column: number;
-    line: number;
+    tokens: Token[];
+    onError?: ErrorCallBack;
+    functionBoundaryStack: any;
+    labelSet: any;
+    capturingParens: number;
+    largestBackReference: number;
+    labelSetStack: {
+        [key: string]: boolean;
+    }[];
+    iterationStack: (boolean | LabelState)[];
+    switchStatement: LabelState;
+    iterationStatement: LabelState;
+    labelDepth: number;
+    tokenRegExp: void | {
+        pattern: string;
+        flags: string;
+    };
 }

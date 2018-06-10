@@ -1,6 +1,6 @@
-import * as ESTree from '../estree';
 import { Parser } from '../types';
-import { Context } from '../utilities';
+import * as ESTree from '../estree';
+import { Context, BindingType, BindingOrigin, ModifierState } from '../common';
 /**
  * Parses class declaration
  *
@@ -9,7 +9,7 @@ import { Context } from '../utilities';
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseClassDeclaration(parser: Parser, context: Context): ESTree.ClassDeclaration;
+export declare function parseClassDeclaration(parser: Parser, context: Context): any;
 /**
  * Parses function declaration
  *
@@ -18,23 +18,21 @@ export declare function parseClassDeclaration(parser: Parser, context: Context):
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseFunctionDeclaration(parser: Parser, context: Context): ESTree.FunctionDeclaration;
+export declare function parseFunctionDeclaration(parser: Parser, context: Context, state?: ModifierState): ESTree.FunctionDeclaration;
 /**
- * Parses async function or async generator declaration
+ * VariableDeclaration :
+ *   BindingIdentifier Initializeropt
+ *   BindingPattern Initializer
  *
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncFunctionDeclaration)
- * @see [Link](https://tc39.github.io/ecma262/#prod-AsyncGeneratorDeclaration)
+ * VariableDeclarationNoIn :
+ *   BindingIdentifier InitializerNoInopt
+ *   BindingPattern InitializerNoIn
+ *
+ *
+ * @see [Link](https://tc39.github.io/ecma262/#prod-VariableDeclaration)
  *
  * @param parser  Parser object
  * @param context Context masks
  */
-export declare function parseAsyncFunctionOrAsyncGeneratorDeclaration(parser: Parser, context: Context): ESTree.FunctionDeclaration;
-/**
- * Parses variable declaration list
- *
- * @see [Link](https://tc39.github.io/ecma262/#prod-VariableDeclarationList)
- *
- * @param parser  Parser object
- * @param context Context masks
- */
-export declare function parseVariableDeclarationList(parser: Parser, context: Context, isConst: boolean): ESTree.VariableDeclarator[];
+export declare function parseVariableDeclaration(id: any, init: any): ESTree.VariableDeclarator;
+export declare function parseVariableDeclarationList(parser: Parser, context: Context, type: BindingType, origin: BindingOrigin): any;
