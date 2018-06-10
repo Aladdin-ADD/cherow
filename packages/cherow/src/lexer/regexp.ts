@@ -390,7 +390,7 @@ function validateCharacterClass(parser: Parser): RegexpState {
 /**
  * Scan regular expression flags
  *
- * @param parser Perser object
+ * @param parser Parser object
  * @param context Context masks
  * @returns
  */
