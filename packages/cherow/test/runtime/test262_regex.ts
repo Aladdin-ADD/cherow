@@ -53,11 +53,7 @@ function isAlphaDigit(c: any): any {
   return ("0" <= c && c <= "9") || ("A" <= c && c <= "Z") || ("a" <= c && c <= "z");
 }
 
-function isAlpha(c: any) {
-  return ("A" <= c && c <= "Z") || ("a" <= c && c <= "z");
-}
-describe('Lexer - Regeular expressions - Test262 tests', () => {
-
+describe('Lexer - Regeular expressions', () => {
   for (var cu = 0x00; cu <= 0x7f; ++cu) {
     const s = String.fromCharCode(cu);
     if (!isAlphaDigit(s) && !isSyntaxCharacter(s) && s !== "/") {
@@ -73,21 +69,6 @@ describe('Lexer - Regeular expressions - Test262 tests', () => {
         });
     }
 
-    for (cu = 0x61 /* a */ ; cu <= 0x7a /* z */ ; ++cu) {
-      const s = String.fromCharCode(cu);
-      if (!isValidAlphaEscapeInAtom(s)) {
-          it(`scans '[\\c${s}]/u'`, () => {
-              const parser = createParserObject(`[\\c${s}]/u`, undefined);
-              const { state } = verifyRegExpPattern(parser, Context.OptionsEditorMode);
-              t.deepEqual({
-                  state,
-              }, {
-                  state: RegexpState.Valid,
-              });
-          });
-      }
-
-  }
 }
 
 
