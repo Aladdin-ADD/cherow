@@ -6,4 +6,4 @@ import { Context } from '../common';
  * parser Parser object
  * context Context masks
  */
-export declare function nextToken(parser: Parser, context: Context): Token;
+export declare function nextToken(parser: Parser, context: Context, onToken?: void | ((token: Token) => void)): Token;

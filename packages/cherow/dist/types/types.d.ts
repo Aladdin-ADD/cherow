@@ -8,7 +8,7 @@ export declare type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 
 /**
  * `onToken` option.
  */
-export declare type OnToken = void | ((error: string, line: number, column: number) => void);
+export declare type OnToken = void | ((token: string, value: string, line?: number, column?: number) => void);
 /**
  * `onError` option.
  */
@@ -39,7 +39,6 @@ export interface Options {
     tokenize?: boolean;
     webcompat?: boolean;
     onComment?: OnComment;
-    onToken?: OnToken;
 }
 export interface Parser {
     source: string;
@@ -60,7 +59,6 @@ export interface Parser {
     tokens: Token[];
     onError?: OnError;
     onComment?: OnComment;
-    onToken?: OnToken;
     functionBoundaryStack: any;
     labelSet: any;
     capturingParens: number;

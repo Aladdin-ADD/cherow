@@ -9,13 +9,13 @@ describe('Miscellaneous - Async Function', () => {
 
         const Failures = [
             'async function foo() { async function bar(a = await baz()) {} }',
-            
+
         ];
 
         for (const arg of Failures) {
             it(`"use strict"; ${arg}`, () => {
                 t.throws(() => {
-                    parseSource(`"use strict"; ${arg}`, undefined, Context.Empty);
+                    parseSource(`"use strict"; ${arg}`, undefined, Context.Empty, undefined);
                 });
             });
         }
@@ -42,7 +42,7 @@ describe('Miscellaneous - Async Function', () => {
         for (const arg of programs) {
             it(`${arg}`, () => {
                 t.doesNotThrow(() => {
-                    parseSource(`${arg}`, undefined, Context.Empty);
+                    parseSource(`${arg}`, undefined, Context.Empty, undefined);
                 });
             });
         }

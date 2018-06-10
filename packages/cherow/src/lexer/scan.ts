@@ -1,5 +1,5 @@
-import { Parser } from '../types';
-import { Token, tokenDesc } from '../token';
+import { Parser, OnToken } from '../types';
+import { Token } from '../token';
 import { Context, Flags } from '../common';
 import { convertToken, advanceNewline, consumeOpt, escapeForPrinting, nextUnicodeChar, mapToToken } from './common';
 import { Chars } from '../chars';
@@ -7,7 +7,6 @@ import { scanIdentifier } from './identifier';
 import { skipSingleHTMLComment, skipSingleLineComment, skipMultilineComment } from './comments';
 import { scanStringLiteral } from './string';
 import { scanNumeric, parseFractionalNumber, parseLeadingZero } from './numeric';
-import { isValidIdentifierStart } from '../unicode';
 import { Errors, recordErrors } from '../errors';
 
 function impossible(parser: Parser, context: Context): void {
@@ -376,7 +375,11 @@ table[Chars.VerticalBar] = (parser: Parser) => {
  * parser Parser object
  * context Context masks
  */
-export function nextToken(parser: Parser, context: Context): Token {
+export function nextToken(
+    parser: Parser,
+    context: Context,
+    onToken?: void | ((token: Token) => void)
+  ): Token {
     parser.flags &= ~Flags.NewLine;
     // remember last token position before scanning
     parser.lastIndex = parser.index;
@@ -389,8 +392,7 @@ export function nextToken(parser: Parser, context: Context): Token {
         parser.startLine = parser.line;
         const token = table[first](parser, context, first);
         if ((token & Token.WhiteSpace) === Token.WhiteSpace) continue;
-        // lexical analysis
-        if (context & Context.OptionsTokenize) parser.tokens.push(convertToken(parser, token));
+        if (onToken) onToken(token);
         return parser.token = token;
     }
     return parser.token = Token.EndOfSource;

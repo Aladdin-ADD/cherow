@@ -1,5 +1,5 @@
 import { Context } from '../common';
-import { Parser, OnError, Options, OnComment, OnToken, EcmaVersion } from '../types';
+import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 /**
  * Creates the parser object
@@ -7,7 +7,7 @@ import * as ESTree from '../estree';
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export declare function createParserObject(source: string, onComment?: OnComment, onError?: OnError, onToken?: OnToken): Parser;
+export declare function createParserObject(source: string, onComment?: OnComment, onError?: OnError): Parser;
 /**
  * Creating the parser
  *
@@ -15,7 +15,7 @@ export declare function createParserObject(source: string, onComment?: OnComment
  * @param options The parser options
  * @param context Context masks
  */
-export declare function parseSource(source: string, options: Options | void, context: Context, ecma: EcmaVersion | void): ESTree.Program;
+export declare function parseSource(source: string, options: Options | void, context: Context, ecma?: EcmaVersion | void): ESTree.Program;
 /**
  * Parse either script code or module code
  *
@@ -53,3 +53,10 @@ export declare function parseModule(source: string, options?: Options, ecma?: Ec
  * @param options parser options
  */
 export declare function validateRegExp(source: string, options?: Options): boolean;
+/**
+ *  Performs lexical analysis (tokenization)
+ *
+ * @param source source code to parse
+ * @param options parser options
+ */
+export declare function tokenize(): any;

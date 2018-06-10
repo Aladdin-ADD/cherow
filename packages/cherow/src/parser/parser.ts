@@ -1,6 +1,6 @@
 import { Token } from '../token';
-import { Context, Flags, LabelState } from '../common';
-import { Parser, OnError, Options, OnComment, OnToken, EcmaVersion } from '../types';
+import { Context, Flags, LabelState, isLexical } from '../common';
+import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
@@ -8,6 +8,7 @@ import { Chars } from '../chars';
 import { consumeOpt, RegexpState } from '../lexer/common';
 import { verifyRegExpPattern } from '../lexer/regexp';
 import { Errors, recordErrors, } from '../errors';
+import { doLexicalAnalysis } from './tokenize';
 
 /**
  * Creates the parser object
@@ -19,7 +20,6 @@ export function createParserObject(
   source: string,
   onComment?: OnComment,
   onError?: OnError,
-  onToken?: OnToken
 ): Parser {
     return {
         // The source code to parse
@@ -65,8 +65,7 @@ export function createParserObject(
         tokenRaw: '',
         tokenRegExp: undefined,
         onError,
-        onComment,
-        onToken,
+        onComment
     };
 }
 
@@ -82,10 +81,9 @@ export function parseSource(
     options: Options | void,
     /*@internal*/
     context: Context,
-    ecma: EcmaVersion | void): ESTree.Program {
+    ecma?: EcmaVersion | void): ESTree.Program {
     let onError: OnError;
     let onComment: OnComment;
-    let onToken: OnToken;
     let sourceFile: string = '';
     if (options !== undefined) {
         // The flag to enable module syntax support
@@ -116,21 +114,19 @@ export function parseSource(
         if (options.experimental) context |= Context.OptionsExperimental;
         // The flag to set to bypass methods in Node
         if (options.node) context |= Context.OptionsNode;
-        // The flag to enable tokenizing
-        if (options.tokenize) context |= Context.OptionsTokenize;
         // The flag to enable web compat (annexB)
         if (options.webcompat) context |= Context.OptionsWebCompat;
         // The flag to enable editor mode
         if (options.edit != null) onError = options.edit;
+        // The callback for handling comments
         if (options.onComment != null) onComment = options.onComment;
-        if (options.onToken != null) onToken = options.onToken;
     }
 
     // Todo: Fix ECMA versioning.
     let todo = ecma;
 
     // Create the parser object
-    const parser = createParserObject(source, onComment, onError, onToken);
+    const parser = createParserObject(source, onComment, onError);
     const body = (context & Context.Module) === Context.Module ?
     parseModuleItemList(parser, context) : parseStatementList(parser, context);
 
@@ -197,11 +193,20 @@ export function validateRegExp(source: string, options?: Options): boolean {
     if (options !== undefined) {
         // The flag to enable editor mode
         if (options.edit) context |= Context.OptionsEditorMode;
-
     }
 
     if (!consumeOpt(parser, Chars.Slash)) recordErrors(parser, context, Errors.InvalidRegularExp);
     const { state } = verifyRegExpPattern(parser, context);
     if (state === RegexpState.Invalid) recordErrors(parser, context, Errors.InvalidRegularExp);
     return (state === RegexpState.Valid) ? true : false;
+}
+
+/**
+ *  Performs lexical analysis (tokenization)
+ *
+ * @param source source code to parse
+ * @param options parser options
+ */
+export function tokenize(): any {
+  return doLexicalAnalysis();
 }

@@ -10,7 +10,7 @@ export type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 | 2019 |
 /**
  * `onToken` option.
  */
-export type OnToken = void | ((error: string, line: number, column: number) => void);
+export type OnToken = void | ((token: string, value: string, line?: number, column?: number) => void);
 
 /**
  * `onError` option.
@@ -79,9 +79,6 @@ export interface Options {
 
     // Option to enable either array or callback for comments
     onComment?: OnComment;
-
-    // Option to enable either array or callback for comments
-    onToken?: OnToken;
   }
 
 export interface Parser {
@@ -103,7 +100,6 @@ export interface Parser {
     tokens: Token[];
     onError?: OnError;
     onComment?: OnComment;
-    onToken?: OnToken;
     functionBoundaryStack: any;
     labelSet: any;
     capturingParens: number;
