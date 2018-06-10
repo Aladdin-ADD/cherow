@@ -530,15 +530,15 @@
     }
     function escapeForPrinting(code) {
         switch (code) {
-            case 0 /* Null */: return "\\0";
-            case 8 /* Backspace */: return "\\b";
-            case 9 /* Tab */: return "\\t";
-            case 10 /* LineFeed */: return "\\n";
-            case 11 /* VerticalTab */: return "\\v";
-            case 12 /* FormFeed */: return "\\f";
-            case 13 /* CarriageReturn */: return "\\r";
-            case 35 /* Hash */: return "\\#";
-            case 64 /* At */: return "\\@";
+            case 0 /* Null */: return '\\0';
+            case 8 /* Backspace */: return '\\b';
+            case 9 /* Tab */: return '\\t';
+            case 10 /* LineFeed */: return '\\n';
+            case 11 /* VerticalTab */: return '\\v';
+            case 12 /* FormFeed */: return '\\f';
+            case 13 /* CarriageReturn */: return '\\r';
+            case 35 /* Hash */: return '\\#';
+            case 64 /* At */: return '\\@';
             default:
                 if (!mustEscape(code))
                     return fromCodePoint(code);
@@ -4998,7 +4998,7 @@
      * @param source The source coode to parser
      * @param sourceFile Optional source file info to be attached in every node
      */
-    function createParserObject(source, errCallback) {
+    function createParserObject(source, onComment, onError) {
         return {
             // The source code to parse
             source: source,
@@ -5042,7 +5042,8 @@
             tokenValue: undefined,
             tokenRaw: '',
             tokenRegExp: undefined,
-            onError: errCallback,
+            onError,
+            onComment,
         };
     }
     /**
@@ -5054,7 +5055,9 @@
      */
     function parseSource(source, options, 
     /*@internal*/
-    context, errCallback) {
+    context) {
+        let onError;
+        let onComment;
         let sourceFile = '';
         if (options !== undefined) {
             // The flag to enable module syntax support
@@ -5108,9 +5111,13 @@
             // The flag to enable editor mode
             if (options.edit)
                 context |= 32 /* OptionsEditorMode */;
+            if (options.edit != null)
+                onError = options.edit;
+            if (options.onComment != null)
+                onComment = options.onComment;
         }
         // Create the parser object
-        const parser = createParserObject(source, errCallback);
+        const parser = createParserObject(source, onComment, onError);
         const body = (context & 65536 /* Module */) === 65536 /* Module */ ?
             parseModuleItemList(parser, context) : parseStatementList(parser, context);
         return {
@@ -5128,10 +5135,10 @@
      * @param source source code to parse
      * @param options parser options
      */
-    function parse(source, options, errCallback) {
+    function parse(source, options) {
         return options && options.module ?
-            parseModule(source, options, errCallback) :
-            parseScript(source, options, errCallback);
+            parseModule(source, options) :
+            parseScript(source, options);
     }
     /**
      * Parse script code
@@ -5141,8 +5148,8 @@
      * @param source source code to parse
      * @param options parser options
      */
-    function parseScript(source, options, errCallback) {
-        return parseSource(source, options, 0 /* Empty */, errCallback);
+    function parseScript(source, options) {
+        return parseSource(source, options, 0 /* Empty */);
     }
     /**
      * Parse module code
@@ -5152,8 +5159,8 @@
      * @param source source code to parse
      * @param options parser options
      */
-    function parseModule(source, options, errCallback) {
-        return parseSource(source, options, 32768 /* Strict */ | 65536 /* Module */, errCallback);
+    function parseModule(source, options) {
+        return parseSource(source, options, 32768 /* Strict */ | 65536 /* Module */);
     }
     /**
      * Validate regular expressions
@@ -5163,9 +5170,9 @@
      * @param source source code to parse
      * @param options parser options
      */
-    function validateRegExp(source, options, errCallback) {
+    function validateRegExp(source, options) {
         // Create the parser object
-        const parser = createParserObject(source, errCallback);
+        const parser = createParserObject(source, undefined, undefined);
         let context = 0 /* Empty */;
         if (options !== undefined) {
             // The flag to enable editor mode
@@ -5175,9 +5182,9 @@
         if (!consumeOpt(parser, 47 /* Slash */))
             recordErrors(parser, context, 51 /* InvalidRegularExp */);
         const { state } = verifyRegExpPattern(parser, context);
-        if (state === 128 /* Invalid */)
+        if (state === 262144 /* Invalid */)
             recordErrors(parser, context, 51 /* InvalidRegularExp */);
-        return (state === 96 /* Valid */) ? true : false;
+        return (state === 65536 /* Valid */) ? true : false;
     }
 
     const version = '1.6.8';

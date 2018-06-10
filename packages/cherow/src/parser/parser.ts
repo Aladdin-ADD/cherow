@@ -1,6 +1,6 @@
 import { Token } from '../token';
 import { Context, Flags, LabelState } from '../common';
-import { Parser, ErrorCallBack, Options } from '../types';
+import { Parser, OnError, Options, OnComment } from '../types';
 import * as ESTree from '../estree';
 import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
@@ -15,7 +15,7 @@ import { Errors, recordErrors, } from '../errors';
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export function createParserObject(source: string, errCallback?: ErrorCallBack): Parser {
+export function createParserObject(source: string, onComment?: OnComment, onError?: OnError): Parser {
     return {
         // The source code to parse
         source: source,
@@ -59,7 +59,8 @@ export function createParserObject(source: string, errCallback?: ErrorCallBack):
         tokenValue: undefined,
         tokenRaw: '',
         tokenRegExp: undefined,
-        onError: errCallback,
+        onError,
+        onComment,
     };
 }
 
@@ -74,8 +75,9 @@ export function parseSource(
     source: string,
     options: Options | void,
     /*@internal*/
-    context: Context,
-    errCallback?: any): ESTree.Program {
+    context: Context): ESTree.Program {
+    let onError: any;
+    let onComment: OnComment;
     let sourceFile: string = '';
     if (options !== undefined) {
         // The flag to enable module syntax support
@@ -112,10 +114,12 @@ export function parseSource(
         if (options.webcompat) context |= Context.OptionsWebCompat;
         // The flag to enable editor mode
         if (options.edit) context |= Context.OptionsEditorMode;
+        if (options.edit != null) onError = options.edit;
+        if (options.onComment != null) onComment = options.onComment;
     }
 
     // Create the parser object
-    const parser = createParserObject(source, errCallback);
+    const parser = createParserObject(source, onComment, onError);
     const body = (context & Context.Module) === Context.Module ?
     parseModuleItemList(parser, context) : parseStatementList(parser, context);
 
@@ -135,10 +139,10 @@ export function parseSource(
  * @param source source code to parse
  * @param options parser options
  */
-export function parse(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
+export function parse(source: string, options?: Options): ESTree.Program {
     return options && options.module ?
-        parseModule(source, options, errCallback) :
-        parseScript(source, options, errCallback);
+        parseModule(source, options) :
+        parseScript(source, options);
 }
 
 /**
@@ -149,8 +153,8 @@ export function parse(source: string, options?: Options, errCallback?: ErrorCall
  * @param source source code to parse
  * @param options parser options
  */
-export function parseScript(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
-    return parseSource(source, options, Context.Empty, errCallback);
+export function parseScript(source: string, options?: Options): ESTree.Program {
+    return parseSource(source, options, Context.Empty);
 }
 
 /**
@@ -161,8 +165,8 @@ export function parseScript(source: string, options?: Options, errCallback?: Err
  * @param source source code to parse
  * @param options parser options
  */
-export function parseModule(source: string, options?: Options, errCallback?: ErrorCallBack): ESTree.Program {
-    return parseSource(source, options, Context.Strict | Context.Module, errCallback);
+export function parseModule(source: string, options?: Options): ESTree.Program {
+    return parseSource(source, options, Context.Strict | Context.Module);
 }
 
 /**
@@ -173,9 +177,9 @@ export function parseModule(source: string, options?: Options, errCallback?: Err
  * @param source source code to parse
  * @param options parser options
  */
-export function validateRegExp(source: string, options?: Options, errCallback?: ErrorCallBack): boolean {
+export function validateRegExp(source: string, options?: Options): boolean {
     // Create the parser object
-    const parser = createParserObject(source, errCallback);
+    const parser = createParserObject(source, undefined, undefined);
 
     let context = Context.Empty;
 

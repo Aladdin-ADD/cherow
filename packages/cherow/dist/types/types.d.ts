@@ -1,9 +1,14 @@
 import { Token } from './token';
 import { Flags, LabelState } from './common';
+import { Comment } from './estree';
 /**
- * Error callback
+ * `onError` option.
  */
-export declare type ErrorCallBack = (error: string, line: number, column: number) => void;
+export declare type OnError = (error: string, line: number, column: number) => void;
+/**
+ * `onComment` option.
+ */
+export declare type OnComment = void | Comment[] | ((type: string, value: string, start: number, end: number) => any);
 /**
  * The parser options.
  */
@@ -25,6 +30,7 @@ export interface Options {
     node?: boolean;
     tokenize?: boolean;
     webcompat?: boolean;
+    onComment?: OnComment;
 }
 export interface Parser {
     source: string;
@@ -43,7 +49,8 @@ export interface Parser {
     tokenValue: any;
     tokenRaw: string;
     tokens: Token[];
-    onError?: ErrorCallBack;
+    onError?: OnError;
+    onComment?: OnComment;
     functionBoundaryStack: any;
     labelSet: any;
     capturingParens: number;
