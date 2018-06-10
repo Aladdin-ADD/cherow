@@ -97,7 +97,6 @@ export declare function setGrammar(flags: Flags, mask: Flags): Context;
 export declare function swapFlags(flags: Flags, mask: Flags): Flags;
 export declare function setContext(context: Context, mask: Context): Context;
 export declare function swapContext(context: Context, state: ModifierState): Context;
-export declare function nextToken(parser: Parser, context: Context): Token;
 export declare function expect(parser: Parser, context: Context, token: Token, errMsg?: Errors): boolean;
 export declare function consume(parser: Parser, context: Context, token: Token): boolean;
 /**

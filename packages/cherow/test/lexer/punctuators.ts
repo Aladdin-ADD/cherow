@@ -1,5 +1,5 @@
 import * as t from 'assert';
-import { scan } from '../../src/lexer/scan';
+import { nextToken } from '../../src/lexer/scan';
 import { createParserObject } from '../../src/parser/parser';
 import { Context } from '../../src/common';
 import { Token, tokenDesc } from '../../src/token';
@@ -69,7 +69,7 @@ describe('Lexer - Punctuators', () => {
     for (const [context, token, op] of punctuators) {
         it(`should scan '${op}' punctuator`, () => {
             const parser = createParserObject(op, undefined);
-            const punctuator = scan(parser, context);
+            const punctuator = nextToken(parser, context);
             t.deepEqual({
                 token: tokenDesc(punctuator),
                 punctuator: (token & Token.Punctuator) === Token.Punctuator,

@@ -3,8 +3,8 @@ import { Token, tokenDesc } from '../token';
 import * as ESTree from '../estree';
 import { Errors, recordErrors, } from '../errors';
 import { parseVariableDeclaration } from './declarations';
-import { parseComputedPropertyName, parseAssignmentExpression,
-} from './expressions';
+import { parseComputedPropertyName, parseAssignmentExpression } from './expressions';
+import { nextToken } from '../lexer/scan';
 import {
     Context,
     Flags,
@@ -12,7 +12,6 @@ import {
     BindingOrigin,
     consume,
     expect,
-    nextToken,
     isInOrOf,
     BindingKind,
     swapFlags

@@ -1,10 +1,10 @@
-import { AssignmentProperty } from './../estree';
 import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
 import * as ESTree from '../estree';
 import { parseAssignmentPattern, parseDelimitedBindingList, parseBindingIdentifier } from './pattern';
 import { parseStatementListItem, parseDirective } from './statements';
 import { Errors, recordErrors, } from '../errors';
+import { nextToken } from '../lexer/scan';
 import {
     Context,
     Flags,
@@ -16,16 +16,13 @@ import {
     swapContext,
     consume,
     expect,
-    nextToken,
     nextTokenIsLeftParen,
     nextTokenIsLeftParenOrKeyword,
     lookahead,
     nextTokenIsArrow,
-    setGrammar,
     reinterpret,
     addCrossingBoundary,
     LabelState,
-    nextTokenIsPeriod,
     nextTokenIsFuncKeywordOnSameLine,
     isStartOfExpression
 } from '../common';

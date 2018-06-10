@@ -1370,8 +1370,9 @@ table$1[94 /* Caret */] = (parser) => {
         return 301990979 /* BitwiseXor */;
     }
 };
-// `_var`
-table$1[95 /* Underscore */] = scanIdentifier;
+// `$foo`, `_var`
+table$1[36 /* Dollar */] =
+    table$1[95 /* Underscore */] = scanIdentifier;
 // ``string``
 // table[Chars.Backtick] = scanTemplate;
 // `|`, `||`, `|=`
@@ -1393,28 +1394,31 @@ table$1[124 /* VerticalBar */] = (parser) => {
     }
     return 301990722 /* BitwiseOr */;
 };
-function scan(parser, context) {
+/**
+ *
+ * parser Parser object
+ * context Context masks
+ */
+function nextToken(parser, context) {
     parser.flags &= ~1 /* NewLine */;
+    // remember last token position before scanning
+    parser.lastIndex = parser.index;
+    parser.lastLine = parser.line;
+    parser.lastColumn = parser.column;
     while (parser.index < parser.length) {
         const first = parser.source.charCodeAt(parser.index);
-        //    if (first <= 32) continue;
-        // Remember the position of the next token
         parser.startIndex = parser.index;
         parser.startColumn = parser.column;
         parser.startLine = parser.line;
-        if ((first >= 97 /* LowerA */ && first <= 122 /* LowerZ */) || first === 36 /* Dollar */) {
-            return scanIdentifier(parser);
-        }
-        else {
-            const token = table$1[first](parser, context, first);
-            if ((token & 524288 /* WhiteSpace */) === 524288 /* WhiteSpace */)
-                continue;
-            if (context & 1 /* OptionsTokenize */)
-                parser.tokens.push(convertToken(parser, token));
-            return token;
-        }
+        const token = table$1[first](parser, context, first);
+        if ((token & 524288 /* WhiteSpace */) === 524288 /* WhiteSpace */)
+            continue;
+        // lexical analysis
+        if (context & 1 /* OptionsTokenize */)
+            parser.tokens.push(convertToken(parser, token));
+        return parser.token = token;
     }
-    return 131072 /* EndOfSource */;
+    return parser.token = 131072 /* EndOfSource */;
 }
 
 function swapFlags(flags, mask) {
@@ -1435,13 +1439,6 @@ function swapContext(context, state) {
     if (!(state & 4 /* Arrow */))
         context = context | 33554432 /* NewTarget */;
     return context;
-}
-function nextToken(parser, context) {
-    parser.lastIndex = parser.index;
-    parser.lastLine = parser.line;
-    parser.lastColumn = parser.column;
-    const token = scan(parser, context);
-    return (parser.token = token);
 }
 function expect(parser, context, token, errMsg = 1 /* UnexpectedToken */) {
     if (parser.token !== token) {
@@ -4992,7 +4989,7 @@ function validateClassRanges(parser, ch) {
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-function createParserObject(source, onComment, onError) {
+function createParserObject(source, onComment, onError, onToken) {
     return {
         // The source code to parse
         source: source,
@@ -5038,6 +5035,7 @@ function createParserObject(source, onComment, onError) {
         tokenRegExp: undefined,
         onError,
         onComment,
+        onToken,
     };
 }
 /**
@@ -5052,6 +5050,7 @@ function parseSource(source, options,
 context, ecma) {
     let onError;
     let onComment;
+    let onToken;
     let sourceFile = '';
     if (options !== undefined) {
         // The flag to enable module syntax support
@@ -5103,15 +5102,15 @@ context, ecma) {
         if (options.webcompat)
             context |= 16 /* OptionsWebCompat */;
         // The flag to enable editor mode
-        if (options.edit)
-            context |= 32 /* OptionsEditorMode */;
         if (options.edit != null)
             onError = options.edit;
         if (options.onComment != null)
             onComment = options.onComment;
+        if (options.onToken != null)
+            onToken = options.onToken;
     }
     // Create the parser object
-    const parser = createParserObject(source, onComment, onError);
+    const parser = createParserObject(source, onComment, onError, onToken);
     const body = (context & 65536 /* Module */) === 65536 /* Module */ ?
         parseModuleItemList(parser, context) : parseStatementList(parser, context);
     return {

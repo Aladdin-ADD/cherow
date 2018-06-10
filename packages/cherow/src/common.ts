@@ -1,4 +1,4 @@
-import { scan } from './lexer/scan';
+import { nextToken } from './lexer/scan';
 import { Token, tokenDesc } from './token';
 import { Parser } from './types';
 import * as ESTree from './estree';
@@ -141,14 +141,6 @@ export function swapContext(context: Context, state: ModifierState): Context {
     // `new.target` disallowed for arrows in global scope
     if (!(state & ModifierState.Arrow)) context = context | Context.NewTarget;
     return context;
-}
-
-export function nextToken(parser: Parser, context: Context): Token {
-    parser.lastIndex = parser.index;
-    parser.lastLine = parser.line;
-    parser.lastColumn = parser.column;
-    const token = scan(parser, context);
-    return (parser.token = token);
 }
 
 export function expect(parser: Parser, context: Context, token: Token, errMsg = Errors.UnexpectedToken): boolean {

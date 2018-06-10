@@ -1,15 +1,14 @@
-import { VariableDeclarator } from './../estree';
 import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
 import * as ESTree from '../estree';
 import { parseIdentifier, parseSequenceExpression, parseExpression, parseAssignmentExpression } from './expressions';
 import { Errors, recordErrors, } from '../errors';
 import { parseFunctionDeclaration, parseVariableDeclarationList, parseClassDeclaration } from './declarations';
-import { parseDelimitedBindingList, parseBindingIdentifierOrPattern } from './pattern';
+import { parseBindingIdentifierOrPattern } from './pattern';
+import { nextToken } from '../lexer/scan';
 import {
     Context,
     Flags,
-    nextToken,
     expect,
     consume,
     consumeSemicolon,
@@ -19,7 +18,6 @@ import {
     setContext,
     isLexical,
     reinterpret,
-    swapContext,
     nextTokenIsFuncKeywordOnSameLine,
     ModifierState,
     getLabel,

@@ -17,10 +17,10 @@ export const pass = (name: string, context: Context, opts: Opts, errCallback?: a
     });
 };
 
-export const fail = (name: string, context: Context, opts: Opts) => {
+export const fail = (name: string, context: Context, opts: Opts, errCallback?: any) => {
     it(name, () => {
         t.throws(() => {
-            parseSource(opts.source, undefined, context);
+            parseSource(opts.source, undefined, context, errCallback);
         });
     });
 };

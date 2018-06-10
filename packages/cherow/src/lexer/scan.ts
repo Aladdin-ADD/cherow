@@ -333,6 +333,7 @@ for (let i = Chars.LowerA; i <= Chars.LowerZ; i++) {
     table[i] = scanIdentifier;
 }
 
+
 // `\\u{N}var`
 table[Chars.Backslash] = scanIdentifier;
 
@@ -346,8 +347,10 @@ table[Chars.Caret] = (parser: Parser) => {
     }
 };
 
-// `_var`
+// `$foo`, `_var`
+table[Chars.Dollar] =
 table[Chars.Underscore] = scanIdentifier;
+
 
 // ``string``
 // table[Chars.Backtick] = scanTemplate;
@@ -368,23 +371,27 @@ table[Chars.VerticalBar] = (parser: Parser) => {
     return Token.BitwiseOr;
 };
 
-export function scan(parser: Parser, context: Context): Token {
+/**
+ *
+ * parser Parser object
+ * context Context masks
+ */
+export function nextToken(parser: Parser, context: Context): Token {
     parser.flags &= ~Flags.NewLine;
+    // remember last token position before scanning
+    parser.lastIndex = parser.index;
+    parser.lastLine = parser.line;
+    parser.lastColumn = parser.column;
     while (parser.index < parser.length) {
         const first = parser.source.charCodeAt(parser.index);
-    //    if (first <= 32) continue;
-        // Remember the position of the next token
         parser.startIndex = parser.index;
         parser.startColumn = parser.column;
         parser.startLine = parser.line;
-        if ((first >= Chars.LowerA && first <= Chars.LowerZ) || first === Chars.Dollar) {
-            return scanIdentifier(parser);
-        } else {
-            const token = table[first](parser, context, first);
-            if ((token & Token.WhiteSpace) === Token.WhiteSpace) continue;
-            if (context & Context.OptionsTokenize) parser.tokens.push(convertToken(parser, token));
-            return token;
-        }
+        const token = table[first](parser, context, first);
+        if ((token & Token.WhiteSpace) === Token.WhiteSpace) continue;
+        // lexical analysis
+        if (context & Context.OptionsTokenize) parser.tokens.push(convertToken(parser, token));
+        return parser.token = token;
     }
-    return Token.EndOfSource;
+    return parser.token = Token.EndOfSource;
 }

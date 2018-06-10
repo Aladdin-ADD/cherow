@@ -6,9 +6,13 @@ import { Comment } from './estree';
  */
 export declare type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
 /**
+ * `onToken` option.
+ */
+export declare type OnToken = void | ((error: string, line: number, column: number) => void);
+/**
  * `onError` option.
  */
-export declare type OnError = (error: string, line: number, column: number) => void;
+export declare type OnError = void | ((error: string, line: number, column: number) => void);
 /**
  * `onComment` option.
  */
@@ -30,11 +34,12 @@ export interface Options {
     globalReturn?: boolean;
     experimental?: boolean;
     skipShebang?: boolean;
-    edit?: boolean;
+    edit?: OnError;
     node?: boolean;
     tokenize?: boolean;
     webcompat?: boolean;
     onComment?: OnComment;
+    onToken?: OnToken;
 }
 export interface Parser {
     source: string;
@@ -55,6 +60,7 @@ export interface Parser {
     tokens: Token[];
     onError?: OnError;
     onComment?: OnComment;
+    onToken?: OnToken;
     functionBoundaryStack: any;
     labelSet: any;
     capturingParens: number;

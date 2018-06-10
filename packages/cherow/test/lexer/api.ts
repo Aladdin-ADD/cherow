@@ -1,5 +1,4 @@
 import * as t from 'assert';
-import { Context } from '../../src/common';
 import { validateRegExp } from '../../src/cherow';
 
 describe('Charow API', () => {
@@ -27,14 +26,6 @@ describe('Charow API', () => {
         it('should throw on invalid unicode regular expression', () => {
             t.throws(() => {
                 validateRegExp('/\\03b/u', undefined);
-            });
-        });
-
-        it('should not throw on invalid unicode regular expression in editor mode', () => {
-            t.doesNotThrow(() => {
-                validateRegExp('/(?=.){1}/u', { edit: true }, (err: string) => {
-                    t.equal(err, 'Invalid regular expression');
-                });
             });
         });
 

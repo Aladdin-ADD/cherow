@@ -1,5 +1,5 @@
 import { Context } from '../common';
-import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
+import { Parser, OnError, Options, OnComment, OnToken, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 /**
  * Creates the parser object
@@ -7,7 +7,7 @@ import * as ESTree from '../estree';
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export declare function createParserObject(source: string, onComment?: OnComment, onError?: OnError): Parser;
+export declare function createParserObject(source: string, onComment?: OnComment, onError?: OnError, onToken?: OnToken): Parser;
 /**
  * Creating the parser
  *

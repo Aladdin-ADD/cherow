@@ -1,5 +1,5 @@
 import * as t from 'assert';
-import { scan } from '../../src/lexer/scan';
+import { nextToken } from '../../src/lexer/scan';
 import { createParserObject } from '../../src/parser/parser';
 import { Context } from '../../src/common';
 import { Token, tokenDesc } from '../../src/token';
@@ -11,7 +11,7 @@ describe('Lexer - Comments', () => {
     function pass(name: string, opts: any) {
         it(name, () => {
             const parser = createParserObject(opts.source, undefined);
-            const token = scan(parser, Context.Empty);
+            const token = nextToken(parser, Context.Empty);
             t.deepEqual({
                 line: parser.line,
                 column: parser.column,

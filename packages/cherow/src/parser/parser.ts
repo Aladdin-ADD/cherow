@@ -1,6 +1,6 @@
 import { Token } from '../token';
 import { Context, Flags, LabelState } from '../common';
-import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
+import { Parser, OnError, Options, OnComment, OnToken, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
@@ -15,7 +15,12 @@ import { Errors, recordErrors, } from '../errors';
  * @param source The source coode to parser
  * @param sourceFile Optional source file info to be attached in every node
  */
-export function createParserObject(source: string, onComment?: OnComment, onError?: OnError): Parser {
+export function createParserObject(
+  source: string,
+  onComment?: OnComment,
+  onError?: OnError,
+  onToken?: OnToken
+): Parser {
     return {
         // The source code to parse
         source: source,
@@ -61,6 +66,7 @@ export function createParserObject(source: string, onComment?: OnComment, onErro
         tokenRegExp: undefined,
         onError,
         onComment,
+        onToken,
     };
 }
 
@@ -77,8 +83,9 @@ export function parseSource(
     /*@internal*/
     context: Context,
     ecma: EcmaVersion | void): ESTree.Program {
-    let onError: any;
+    let onError: OnError;
     let onComment: OnComment;
+    let onToken: OnToken;
     let sourceFile: string = '';
     if (options !== undefined) {
         // The flag to enable module syntax support
@@ -114,16 +121,16 @@ export function parseSource(
         // The flag to enable web compat (annexB)
         if (options.webcompat) context |= Context.OptionsWebCompat;
         // The flag to enable editor mode
-        if (options.edit) context |= Context.OptionsEditorMode;
         if (options.edit != null) onError = options.edit;
         if (options.onComment != null) onComment = options.onComment;
+        if (options.onToken != null) onToken = options.onToken;
     }
 
     // Todo: Fix ECMA versioning.
     let todo = ecma;
 
     // Create the parser object
-    const parser = createParserObject(source, onComment, onError);
+    const parser = createParserObject(source, onComment, onError, onToken);
     const body = (context & Context.Module) === Context.Module ?
     parseModuleItemList(parser, context) : parseStatementList(parser, context);
 

@@ -7,11 +7,15 @@ import { Comment } from './estree';
  */
 export type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
 
+/**
+ * `onToken` option.
+ */
+export type OnToken = void | ((error: string, line: number, column: number) => void);
 
 /**
  * `onError` option.
  */
-export type OnError = (error: string, line: number, column: number) => void;
+export type OnError = void | ((error: string, line: number, column: number) => void);
 
 /**
  * `onComment` option.
@@ -62,7 +66,7 @@ export interface Options {
     skipShebang?: boolean;
 
     // Enable editor mode
-    edit?: boolean;
+    edit?: OnError;
 
     // Enables method that should be bypassed when running on NodeJS
     node?: boolean;
@@ -75,6 +79,9 @@ export interface Options {
 
     // Option to enable either array or callback for comments
     onComment?: OnComment;
+
+    // Option to enable either array or callback for comments
+    onToken?: OnToken;
   }
 
 export interface Parser {
@@ -96,6 +103,7 @@ export interface Parser {
     tokens: Token[];
     onError?: OnError;
     onComment?: OnComment;
+    onToken?: OnToken;
     functionBoundaryStack: any;
     labelSet: any;
     capturingParens: number;

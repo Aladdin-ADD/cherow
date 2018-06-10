@@ -1,5 +1,4 @@
 import * as ESTree from '../estree';
-import { AssignmentProperty } from './../estree';
 import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
 import { parseAssignmentPattern, parseDelimitedBindingList, parseBindingIdentifier } from './pattern';
@@ -7,10 +6,10 @@ import { parseStatementListItem, parseDirective, parseVariableStatement } from '
 import { parseClassDeclaration, parseFunctionDeclaration } from './declarations';
 import { parseAssignmentExpression, parseLiteral, parseIdentifier } from './expressions';
 import { Errors, recordErrors, } from '../errors';
+import { nextToken } from '../lexer/scan';
 import {
     expect,
     Context,
-    nextToken,
     consume,
     consumeSemicolon,
     lookahead,

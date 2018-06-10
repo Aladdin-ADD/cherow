@@ -1,5 +1,5 @@
 import * as t from 'assert';
-import { scan } from '../../src/lexer/scan';
+import { nextToken } from '../../src/lexer/scan';
 import { createParserObject } from '../../src/parser/parser';
 import { Context } from '../../src/common';
 import { Token, tokenDesc } from '../../src/token';
@@ -91,7 +91,7 @@ describe('Lexer - Numbers', () => {
         for (const [ctx, source, parsed, token] of inputData) {
             it(`scans '${source}'`, () => {
                 const parser = createParserObject(source, undefined);
-                const found = scan(parser, ctx);
+                const found = nextToken(parser, ctx);
 
                 t.deepEqual({
                     value: parser.tokenValue,
