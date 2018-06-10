@@ -14,7 +14,6 @@ export const enum ClassRangesState {
     InCharacterRange = 1 << 10,
 }
 
-
 export const enum RegexpState {
     InvalidClassEscape = 1 << 0,
     ValidClassEscape = 1 << 6,
@@ -239,7 +238,7 @@ export function validateQuantifierPrefix(parser: Parser): boolean | number {
     let max = 0;
     let ch = parser.source.charCodeAt(parser.index);
     const missingDigits = !(ch >= Chars.Zero && ch <= Chars.Nine);
- 
+
     while (ch >= Chars.Zero && ch <= Chars.Nine) {
         state = state | IntervalQuantifierState.IsLow;
         parser.index++; parser.column++;

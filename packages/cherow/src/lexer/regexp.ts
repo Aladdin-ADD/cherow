@@ -62,7 +62,7 @@ export function scanRegularExpression(parser: Parser, context: Context): Token {
  */
 
 export function verifyRegExpPattern(parser: Parser, context: Context): {
-    flags: string;pattern: string;state: RegexpState;
+    flags: string; pattern: string; state: RegexpState;
 } {
     const bodyStart = parser.index;
     const bodyState = validateRegexBody(parser, context, 0, RegexpState.Valid);
@@ -236,7 +236,7 @@ function validateRegexBody(
  *
  * @see [Link](https://tc39.github.io/ecma262/#prod-AtomEscape)
  * @see [Link](https://www.ecma-international.org/ecma-262/8.0/#prod-DecimalEscape)
- * 
+ *
  * @param parser Parser object
  */
 
@@ -644,7 +644,7 @@ function validateClassRanges(parser: Parser, ch: number): RegexpState {
             // `\`
             case Chars.Backslash:
                 {
-                    parser.index++;parser.column++;
+                    parser.index++; parser.column++;
                     ch = validateClassAndClassCharacterEscape(parser);
                     if (ch === RegexpState.InvalidCharClass) {
                         subState = RegexpState.Invalid;
