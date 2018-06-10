@@ -623,13 +623,14 @@ function validateClassRanges(parser: Parser, ch: number): RegexpState {
     let count = 0;
 
     while (parser.index < parser.length) {
+        parser.index++;
+        parser.column++;
 
         switch (ch) {
 
             // `]`
             case Chars.RightBracket:
                 {
-                    parser.index++; parser.column++;
                     if (state & ClassRangesState.SeenUnicoderange &&
                         hasBit(prevState, ClassRangesState.IsSurrogateLead) &&
                         (leftUnicodeRange === RegexpState.InvalidCharClassRange ||
@@ -644,7 +645,6 @@ function validateClassRanges(parser: Parser, ch: number): RegexpState {
             // `\`
             case Chars.Backslash:
                 {
-                    parser.index++;parser.column++;
                     ch = validateClassAndClassCharacterEscape(parser);
                     if (ch === RegexpState.InvalidCharClass) {
                         subState = RegexpState.Invalid;
@@ -656,10 +656,6 @@ function validateClassRanges(parser: Parser, ch: number): RegexpState {
                     }
                     break;
                 }
-
-            default:
-                parser.index++;
-                parser.column++;
         }
 
         if (hasBit(prevState, ClassRangesState.IsSurrogateLead) && ch >= 0xDC00 && ch <= 0xDFFF) {
