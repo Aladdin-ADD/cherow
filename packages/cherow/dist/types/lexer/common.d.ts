@@ -9,19 +9,19 @@ export declare const enum ClassRangesState {
     InCharacterRange = 1024
 }
 export declare const enum RegexpState {
-    InvalidClassEscape = 2,
-    ValidClassEscape = 6,
-    UnicodeMode = 16,
-    SloppyMode = 32,
-    OnlySloppy = 64,
-    Valid = 96,
-    Invalid = 128,
-    InvalidCharClass = 1114112,
-    InvalidCharClassRange = 1114113,
+    InvalidClassEscape = 1,
+    ValidClassEscape = 64,
+    UnicodeMode = 1024,
+    SloppyMode = 4096,
+    OnlySloppy = 16384,
+    Valid = 65536,
+    Invalid = 262144,
     InvalidCharClassInSloppy = 16777216,
     Quantifier = 33554432,
     MissingDigits = 67108864,
-    EndOfRegex = 134217728
+    EndOfRegex = 134217728,
+    InvalidCharClass = 1114112,
+    InvalidCharClassRange = 1114113
 }
 export declare const enum RegExpFlags {
     Empty = 0,
@@ -88,7 +88,22 @@ export declare function isIdentRestChr(c: number): boolean;
  * @returns {boolean}
  */
 export declare function isValidUnicodeidcontinue(code: number): boolean;
-export declare function setValidationState(state: RegexpState, escapeStatus: RegexpState): RegexpState;
+/**
+ * Adjust correct regexp validator state
+ *
+ *
+ * @param parser Parser object
+ * @param code Code point
+ */
+export declare function setValidationState(prevState: RegexpState, currState: RegexpState): RegexpState;
+/**
+ * Adjust correct regexp validator state
+ *
+ *
+ * @param parser Parser object
+ * @param flagState State returned by the regular expression flag
+ * @param bodyState State returned after parsing the regex body
+  */
 export declare function setRegExpState(parser: Parser, flagState: RegexpState, bodyState: RegexpState): RegexpState;
 /**
  * Parse back reference index
@@ -99,3 +114,19 @@ export declare function setRegExpState(parser: Parser, flagState: RegexpState, b
  * @param code Code point
  */
 export declare function parseBackReferenceIndex(parser: Parser, code: number): RegexpState;
+/**
+ * Get unicode range
+ *
+ * @param range Left unicode range
+ * @param state Current lexer state
+ * @param right Right unicode range
+ */
+export declare function getUnicodeRange(range: any, state: RegexpState, right: number): RegexpState;
+/**
+ * Get non-unicode range
+ *
+ * @param range Left unicode range
+ * @param state Current lexer state
+ * @param right Right unicode range
+ */
+export declare function getRange(ch: number, range: number, state: RegexpState): RegexpState;

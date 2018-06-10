@@ -418,42 +418,50 @@
             code === 8204 /* Zwnj */ ||
             code === 8205 /* Zwj */;
     }
-    function setValidationState(state, escapeStatus) {
-        if (escapeStatus === 128 /* Invalid */) {
-            state = 128 /* Invalid */;
+    /**
+     * Adjust correct regexp validator state
+     *
+     *
+     * @param parser Parser object
+     * @param code Code point
+     */
+    function setValidationState(prevState, currState) {
+        if (currState & 262144 /* Invalid */)
+            return 262144 /* Invalid */;
+        if (currState & 4096 /* SloppyMode */) {
+            if (prevState & 65536 /* Valid */)
+                return 4096 /* SloppyMode */;
+            if (prevState & 1024 /* UnicodeMode */)
+                return 262144 /* Invalid */;
         }
-        else if (escapeStatus === 32 /* SloppyMode */) {
-            if (state === 96 /* Valid */)
-                state = 32 /* SloppyMode */;
-            else if (state === 16 /* UnicodeMode */)
-                state = 128 /* Invalid */;
+        else if (currState & 1024 /* UnicodeMode */) {
+            if (prevState & 65536 /* Valid */)
+                return 1024 /* UnicodeMode */;
+            if (prevState & 4096 /* SloppyMode */)
+                return 262144 /* Invalid */;
         }
-        else if (escapeStatus === 16 /* UnicodeMode */) {
-            if (state === 96 /* Valid */)
-                state = 16 /* UnicodeMode */;
-            else if (state === 32 /* SloppyMode */)
-                state = 128 /* Invalid */;
-        }
-        return state;
+        return prevState;
     }
+    /**
+     * Adjust correct regexp validator state
+     *
+     *
+     * @param parser Parser object
+     * @param flagState State returned by the regular expression flag
+     * @param bodyState State returned after parsing the regex body
+      */
     function setRegExpState(parser, flagState, bodyState) {
         if (parser.capturingParens < parser.largestBackReference)
-            return 128 /* Invalid */;
-        if (bodyState === 128 /* Invalid */ || flagState === 128 /* Invalid */)
-            return 128 /* Invalid */;
-        if (bodyState === 16 /* UnicodeMode */) {
-            return flagState === 16 /* UnicodeMode */ ? 96 /* Valid */ :
-                128 /* Invalid */;
-        }
-        if (bodyState === 64 /* OnlySloppy */) {
-            return flagState !== 16 /* UnicodeMode */ ? 96 /* Valid */ :
-                128 /* Invalid */;
-        }
-        if (bodyState === 32 /* SloppyMode */) {
-            return flagState !== 16 /* UnicodeMode */ ? 96 /* Valid */ :
-                128 /* Invalid */;
-        }
-        return 96 /* Valid */;
+            return 262144 /* Invalid */;
+        if (bodyState & 262144 /* Invalid */ || flagState & 262144 /* Invalid */)
+            return 262144 /* Invalid */;
+        if (bodyState & 1024 /* UnicodeMode */)
+            return flagState & 1024 /* UnicodeMode */ ? 65536 /* Valid */ : 262144 /* Invalid */;
+        if (bodyState & 16384 /* OnlySloppy */)
+            return !(flagState & 1024 /* UnicodeMode */) ? 65536 /* Valid */ : 262144 /* Invalid */;
+        if (bodyState & 4096 /* SloppyMode */)
+            return !(flagState & 1024 /* UnicodeMode */) ? 65536 /* Valid */ : 262144 /* Invalid */;
+        return 65536 /* Valid */;
     }
     /**
      * Parse back reference index
@@ -476,7 +484,39 @@
             }
         }
         parser.largestBackReference = value;
-        return 96 /* Valid */;
+        return 65536 /* Valid */;
+    }
+    /**
+     * Get unicode range
+     *
+     * @param range Left unicode range
+     * @param state Current lexer state
+     * @param right Right unicode range
+     */
+    function getUnicodeRange(range, state, right) {
+        if (range === 1114113 /* InvalidCharClassRange */ || right === 1114113 /* InvalidCharClassRange */ || range > right) {
+            if (state === 1024 /* UnicodeMode */)
+                return 262144 /* Invalid */;
+            else if (state !== 262144 /* Invalid */)
+                return 4096 /* SloppyMode */;
+        }
+        return state;
+    }
+    /**
+     * Get non-unicode range
+     *
+     * @param range Left unicode range
+     * @param state Current lexer state
+     * @param right Right unicode range
+     */
+    function getRange(ch, range, state) {
+        if (range === 1114113 /* InvalidCharClassRange */ || ch === 1114113 /* InvalidCharClassRange */ || range > ch) {
+            if (state === 4096 /* SloppyMode */)
+                return 262144 /* Invalid */;
+            else if (state !== 262144 /* Invalid */)
+                return 1024 /* UnicodeMode */;
+        }
+        return state;
     }
 
     const isIdentifierPart = (code) => isValidIdentifierPart(code) ||
@@ -4321,7 +4361,7 @@
      */
     function verifyRegExpPattern(parser, context) {
         const bodyStart = parser.index;
-        const bodyState = validateRegexBody(parser, context, 0, 96 /* Valid */);
+        const bodyState = validateRegexBody(parser, context, 0, 65536 /* Valid */);
         const bodyEnd = parser.index - 1;
         const { index: flagStart } = parser;
         const flagState = scanRegexFlags(parser, context);
@@ -4346,7 +4386,7 @@
                 // `/`
                 case 47 /* Slash */:
                     if (depth !== 0)
-                        return 128 /* Invalid */;
+                        return 262144 /* Invalid */;
                     return state;
                 // `|`
                 case 124 /* VerticalBar */:
@@ -4362,7 +4402,7 @@
                 case 92 /* Backslash */:
                     maybeQuantifier = true;
                     if (parser.index >= parser.length) {
-                        state = 128 /* Invalid */;
+                        state = 262144 /* Invalid */;
                     }
                     else {
                         // Atom ::
@@ -4387,19 +4427,19 @@
                             parser.column++;
                         }
                         else
-                            state = 128 /* Invalid */;
+                            state = 262144 /* Invalid */;
                     }
                     else {
                         ++parser.capturingParens;
                     }
                     maybeQuantifier = true;
-                    state = setValidationState(state, validateRegexBody(parser, context, depth + 1, 96 /* Valid */));
+                    state = setValidationState(state, validateRegexBody(parser, context, depth + 1, 65536 /* Valid */));
                     break;
                 // `)`
                 case 41 /* RightParen */:
                     if (depth > 0)
                         return state;
-                    state = 128 /* Invalid */;
+                    state = 262144 /* Invalid */;
                     maybeQuantifier = true;
                     break;
                 // `[`
@@ -4409,7 +4449,7 @@
                     break;
                 // `]`
                 case 93 /* RightBracket */:
-                    state = 128 /* Invalid */;
+                    state = 262144 /* Invalid */;
                     maybeQuantifier = true;
                     break;
                 // `?`, `*`, `+`
@@ -4423,7 +4463,7 @@
                         }
                     }
                     else {
-                        state = 128 /* Invalid */;
+                        state = 262144 /* Invalid */;
                     }
                     break;
                 // `{`
@@ -4435,13 +4475,13 @@
                         if (res & 67108864 /* MissingDigits */) {
                             res = res ^ 67108864 /* MissingDigits */;
                             if (res)
-                                state = 32 /* SloppyMode */;
+                                state = 4096 /* SloppyMode */;
                             else
-                                state = 128 /* Invalid */;
+                                state = 262144 /* Invalid */;
                         }
                         else if (!res) {
                             // Nothing to repeat
-                            state = 128 /* Invalid */;
+                            state = 262144 /* Invalid */;
                         }
                         if (parser.index < parser.length) {
                             consumeOpt(parser, 63 /* QuestionMark */);
@@ -4449,24 +4489,24 @@
                         maybeQuantifier = false;
                     }
                     else {
-                        state = 128 /* Invalid */;
+                        state = 262144 /* Invalid */;
                     }
                     break;
                 // `}`
                 case 125 /* RightBrace */:
-                    state = 128 /* Invalid */;
+                    state = 262144 /* Invalid */;
                     maybeQuantifier = false;
                     break;
                 case 13 /* CarriageReturn */:
                 case 10 /* LineFeed */:
                 case 8232 /* LineSeparator */:
                 case 8233 /* ParagraphSeparator */:
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 default:
                     maybeQuantifier = true;
             }
         }
-        return 128 /* Invalid */;
+        return 262144 /* Invalid */;
     }
     /**
      * Validates atom escape
@@ -4514,7 +4554,7 @@
             case 125 /* RightBrace */:
             case 47 /* Slash */:
             case 124 /* VerticalBar */:
-                return 96 /* Valid */;
+                return 65536 /* Valid */;
             // RegExpUnicodeEscapeSequence[?U]
             case 117 /* LowerU */:
                 if (consumeOpt(parser, 123 /* LeftBrace */)) {
@@ -4522,40 +4562,40 @@
                     let ch2 = parser.source.charCodeAt(parser.index);
                     let code = toHex(ch2);
                     if (code < 0)
-                        return 128 /* Invalid */;
+                        return 262144 /* Invalid */;
                     parser.index++;
                     ch2 = parser.source.charCodeAt(parser.index);
                     while (ch2 !== 125 /* RightBrace */) {
                         const digit = toHex(ch2);
                         if (digit < 0)
-                            return 128 /* Invalid */;
+                            return 262144 /* Invalid */;
                         code = code * 16 + digit;
                         // Code point out of bounds
                         if (code > 1114111 /* NonBMPMax */)
-                            return 128 /* Invalid */;
+                            return 262144 /* Invalid */;
                         parser.index++;
                         ch2 = parser.source.charCodeAt(parser.index);
                     }
                     parser.index++;
-                    return 16 /* UnicodeMode */;
+                    return 1024 /* UnicodeMode */;
                 }
                 // \uNNNN
                 if (parser.index >= parser.length || toHex(parser.source.charCodeAt(parser.index)) < 0) {
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
                 if (parser.index >= parser.length || toHex(parser.source.charCodeAt(parser.index++)) < 0) {
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
             // falls through
             case 88 /* UpperX */:
             case 120 /* LowerX */:
                 if (parser.index >= parser.length || toHex(parser.source.charCodeAt(parser.index++)) < 0) {
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
                 if (parser.index >= parser.length || toHex(parser.source.charCodeAt(parser.index++)) < 0) {
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
-                return 96 /* Valid */;
+                return 65536 /* Valid */;
             case 99 /* LowerC */:
                 {
                     if (parser.index < parser.length) {
@@ -4565,17 +4605,17 @@
                         if (letter >= 65 /* UpperA */ && letter <= 90 /* UpperZ */) {
                             parser.index++;
                             parser.column++;
-                            return 32 /* SloppyMode */;
+                            return 4096 /* SloppyMode */;
                         }
                     }
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
             case 48 /* Zero */:
                 const ch = parser.source.charCodeAt(parser.index);
                 if (parser.index >= parser.length || ch >= 48 /* Zero */ && ch <= 57 /* Nine */) {
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
                 }
-                return 96 /* Valid */;
+                return 65536 /* Valid */;
             case 49 /* One */:
             case 50 /* Two */:
             case 51 /* Three */:
@@ -4590,11 +4630,11 @@
             case 10 /* LineFeed */:
             case 8233 /* ParagraphSeparator */:
             case 8232 /* LineSeparator */:
-                return 128 /* Invalid */;
+                return 262144 /* Invalid */;
             default:
                 if (isFlagStart(next))
-                    return 128 /* Invalid */;
-                return 32 /* SloppyMode */;
+                    return 262144 /* Invalid */;
+                return 4096 /* SloppyMode */;
         }
     }
     /**
@@ -4607,7 +4647,7 @@
      */
     function validateCharacterClass(parser) {
         if (parser.index >= parser.length)
-            return 128 /* Invalid */;
+            return 262144 /* Invalid */;
         consumeOpt(parser, 94 /* Caret */);
         const next = parser.source.charCodeAt(parser.index);
         return validateClassRanges(parser, next);
@@ -4642,7 +4682,7 @@
                 case 117 /* LowerU */:
                     if (mask & 8 /* Unicode */) {
                         recordErrors(parser, context, 50 /* DuplicateRegExpFlag */, 'u');
-                        return 128 /* Invalid */;
+                        return 262144 /* Invalid */;
                     }
                     mask |= 8 /* Unicode */;
                     break;
@@ -4659,12 +4699,12 @@
                 default:
                     if (!isFlagStart(c))
                         break loop;
-                    return 128 /* Invalid */;
+                    return 262144 /* Invalid */;
             }
             parser.index++;
             parser.column++;
         }
-        return mask & 8 /* Unicode */ ? 16 /* UnicodeMode */ : 32 /* SloppyMode */;
+        return mask & 8 /* Unicode */ ? 1024 /* UnicodeMode */ : 4096 /* SloppyMode */;
     }
     /**
      * Validates class and character class escape
@@ -4831,60 +4871,58 @@
      * @param context Context masks
      */
     function validateClassRanges(parser, ch) {
-        let prev = 0;
+        let prevChar = 0;
         let surrogate = 0;
-        let seenTrailSurrogate = true;
-        let seenLeadSurrogate = false;
-        let lhsUnicodeRange = 0;
+        let leftUnicodeRange = 0;
         let CharacterRange = 0;
-        let subState = 96 /* Valid */;
+        let prevState = 0 /* Empty */;
+        let subState = 65536 /* Valid */;
         let state = 0 /* Empty */;
         let count = 0;
         while (parser.index < parser.length) {
+            parser.index++;
+            parser.column++;
             switch (ch) {
+                // `]`
                 case 93 /* RightBracket */:
                     {
-                        parser.index++;
-                        parser.column++;
                         if (state & 256 /* SeenUnicoderange */ &&
-                            seenLeadSurrogate &&
-                            (lhsUnicodeRange === 1114113 /* InvalidCharClassRange */ ||
-                                prev === 1114113 /* InvalidCharClassRange */ || lhsUnicodeRange > prev)) {
-                            if (subState === 16 /* UnicodeMode */ ||
-                                subState === 128 /* Invalid */)
-                                return 128 /* Invalid */;
-                            return 32 /* SloppyMode */;
+                            hasBit(prevState, 4 /* IsSurrogateLead */) &&
+                            (leftUnicodeRange === 1114113 /* InvalidCharClassRange */ ||
+                                prevChar & 1114113 /* InvalidCharClassRange */ || leftUnicodeRange > prevChar)) {
+                            if (subState & 1024 /* UnicodeMode */ ||
+                                subState & 262144 /* Invalid */)
+                                return 262144 /* Invalid */;
+                            return 4096 /* SloppyMode */;
                         }
                         return subState;
                     }
+                // `\`
                 case 92 /* Backslash */:
                     {
-                        parser.index++;
-                        parser.column++;
                         ch = validateClassAndClassCharacterEscape(parser);
                         if (ch === 1114112 /* InvalidCharClass */) {
-                            subState = 128 /* Invalid */;
+                            subState = 262144 /* Invalid */;
                         }
                         else if (ch & 16777216 /* InvalidCharClassInSloppy */) {
                             ch = ch ^ 16777216 /* InvalidCharClassInSloppy */;
                             if (ch === 1114112 /* InvalidCharClass */)
-                                subState = 128 /* Invalid */;
-                            else if (subState === 96 /* Valid */)
-                                subState = 16 /* UnicodeMode */;
-                            else if (subState === 32 /* SloppyMode */)
-                                subState = 128 /* Invalid */;
+                                subState = 262144 /* Invalid */;
+                            else if (subState & 65536 /* Valid */)
+                                subState = 1024 /* UnicodeMode */;
+                            else if (subState & 4096 /* SloppyMode */)
+                                subState = 262144 /* Invalid */;
                         }
                         break;
                     }
-                default:
-                    parser.index++;
-                    parser.column++;
             }
-            if (seenLeadSurrogate && ch >= 0xDC00 && ch <= 0xDFFF) {
+            if (hasBit(prevState, 4 /* IsSurrogateLead */) && ch >= 0xDC00 && ch <= 0xDFFF) {
                 state = state & ~4 /* IsSurrogateLead */ | 1 /* IsTrailSurrogate */;
-                surrogate = (prev - 0xD800) * 0x400 + (ch - 0xDC00) + 0x10000;
+                surrogate = (prevChar - 0xD800) * 0x400 + (ch - 0xDC00) + 0x10000;
             }
-            else if (!seenTrailSurrogate && !seenLeadSurrogate && (ch & 0x1fffff) > 0xffff) {
+            else if (!hasBit(prevState, 1 /* IsTrailSurrogate */) &&
+                hasBit(prevState, 4 /* IsSurrogateLead */) &&
+                (ch & 0x1fffff) > 0xffff) {
                 state = state & ~4 /* IsSurrogateLead */ | 1 /* IsTrailSurrogate */;
                 surrogate = ch;
             }
@@ -4894,21 +4932,21 @@
                     state = state | 4 /* IsSurrogateLead */;
             }
             if (state & 256 /* SeenUnicoderange */) {
-                const urangeRight = state & 1 /* IsTrailSurrogate */ ? surrogate : seenLeadSurrogate ? prev : ch;
-                if (!(state & 4 /* IsSurrogateLead */) || seenLeadSurrogate) {
+                const rightUnicodeRange = state & 1 /* IsTrailSurrogate */ ? surrogate : hasBit(prevState, 4 /* IsSurrogateLead */) ? prevChar : ch;
+                if (!(state & 4 /* IsSurrogateLead */) || hasBit(prevState, 4 /* IsSurrogateLead */)) {
                     state = state & ~256 /* SeenUnicoderange */;
-                    subState = getUnicodeRange(lhsUnicodeRange, subState, urangeRight);
+                    subState = getUnicodeRange(leftUnicodeRange, subState, rightUnicodeRange);
                 }
             }
             else if (ch === 45 /* Hyphen */ && count > 0) {
                 state = state | 256 /* SeenUnicoderange */;
             }
             else {
-                lhsUnicodeRange = state & 1 /* IsTrailSurrogate */ ? surrogate : ch;
+                leftUnicodeRange = state & 1 /* IsTrailSurrogate */ ? surrogate : ch;
             }
             if (state & 1024 /* InCharacterRange */) {
                 state = state & ~1024 /* InCharacterRange */;
-                subState = getCharagterRange(ch, CharacterRange, subState);
+                subState = getRange(ch, CharacterRange, subState);
             }
             else if (ch === 45 /* Hyphen */ && count > 0) {
                 state = state | 1024 /* InCharacterRange */;
@@ -4916,31 +4954,12 @@
             else {
                 CharacterRange = ch;
             }
-            seenTrailSurrogate = (state & 1 /* IsTrailSurrogate */) === 1 /* IsTrailSurrogate */;
-            seenLeadSurrogate = (state & 4 /* IsSurrogateLead */) === 4 /* IsSurrogateLead */;
-            prev = ch;
-            ++count;
+            prevState = state;
+            prevChar = ch;
+            count++;
             ch = parser.source.charCodeAt(parser.index);
         }
-        return 128 /* Invalid */;
-    }
-    function getUnicodeRange(range, state, right) {
-        if (range === 1114113 /* InvalidCharClassRange */ || right === 1114113 /* InvalidCharClassRange */ || range > right) {
-            if (state === 16 /* UnicodeMode */)
-                return 128 /* Invalid */;
-            else if (state !== 128 /* Invalid */)
-                return 32 /* SloppyMode */;
-        }
-        return state;
-    }
-    function getCharagterRange(ch, range, state) {
-        if (range === 1114113 /* InvalidCharClassRange */ || ch === 1114113 /* InvalidCharClassRange */ || range > ch) {
-            if (state === 32 /* SloppyMode */)
-                return 128 /* Invalid */;
-            else if (state !== 128 /* Invalid */)
-                return 16 /* UnicodeMode */;
-        }
-        return state;
+        return 262144 /* Invalid */;
     }
 
     /**

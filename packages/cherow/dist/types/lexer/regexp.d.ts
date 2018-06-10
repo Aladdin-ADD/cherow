@@ -37,5 +37,3 @@ export declare function verifyRegExpPattern(parser: Parser, context: Context): {
  * @param parser Parser object
  */
 export declare function validateClassAndClassCharacterEscape(parser: Parser): RegexpState | Chars;
-export declare function getUnicodeRange(range: any, state: RegexpState, right: any): RegexpState;
-export declare function getCharagterRange(ch: number, range: any, state: RegexpState): RegexpState;
