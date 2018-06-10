@@ -130,3 +130,5 @@ export declare function getUnicodeRange(range: any, state: RegexpState, right: n
  * @param right Right unicode range
  */
 export declare function getRange(ch: number, range: number, state: RegexpState): RegexpState;
+export declare function mapToToken(token: Token): (parser: Parser) => Token;
+export declare function escapeForPrinting(code: number): string;

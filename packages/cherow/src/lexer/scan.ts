@@ -1,15 +1,20 @@
 import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
 import { Context, Flags } from '../common';
-import { convertToken, advanceNewline, consumeOpt } from './common';
+import { convertToken, advanceNewline, consumeOpt, escapeForPrinting, nextUnicodeChar, mapToToken } from './common';
 import { Chars } from '../chars';
 import { scanIdentifier } from './identifier';
 import { skipSingleHTMLComment, skipSingleLineComment, skipMultilineComment } from './comments';
 import { scanStringLiteral } from './string';
 import { scanNumeric, parseFractionalNumber, parseLeadingZero } from './numeric';
 import { isValidIdentifierStart } from '../unicode';
+import { Errors, recordErrors } from '../errors';
 
-const table = new Array(128).fill(() => Token.EndOfSource) as any;
+function impossible(parser: Parser, context: Context): void {
+    recordErrors(parser, context, Errors.UnexpectedToken, escapeForPrinting(nextUnicodeChar(parser)));
+}
+
+const table = new Array(128).fill(impossible, 0, 0xFFFF) as ((parser: Parser, context: Context, first: number) => Token)[];
 
 table[Chars.Space] =
     table[Chars.Tab] =
@@ -29,14 +34,6 @@ table[Chars.LineSeparator] =
         parser.flags |= Flags.NewLine;
         return Token.WhiteSpace;
     };
-
-/** Punctuators */
-function mapToToken(token: Token) {
-    return (parser: Parser) => {
-        parser.index++; parser.column++;
-        return token;
-    };
-}
 
 // `,`
 table[Chars.Comma] = mapToToken(Token.Comma);

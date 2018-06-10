@@ -1,10 +1,9 @@
-import { Identifier } from './../estree';
 import { Parser } from '../types';
 import { Token, tokenDesc } from '../token';
 import { Context, Flags } from '../common';
 import { Chars } from '../chars';
 import { Errors, recordErrors } from '../errors';
-import { isValidIdentifierPart } from '../unicode';
+import { isValidIdentifierPart, mustEscape } from '../unicode';
 
 export const enum ClassRangesState {
     Empty = 0,
@@ -402,4 +401,32 @@ export function getRange(ch: number, range: number, state: RegexpState): RegexpS
         else if (state !== RegexpState.Invalid) return RegexpState.UnicodeMode;
     }
     return state;
+}
+
+export function mapToToken(token: Token) {
+  return (parser: Parser) => {
+      parser.index++; parser.column++;
+      return token;
+  };
+}
+
+export function escapeForPrinting(code: number): string {
+  switch (code) {
+      case Chars.Null: return '\\0';
+      case Chars.Backspace: return '\\b';
+      case Chars.Tab: return '\\t';
+      case Chars.LineFeed: return '\\n';
+      case Chars.VerticalTab: return '\\v';
+      case Chars.FormFeed: return '\\f';
+      case Chars.CarriageReturn: return '\\r';
+      case Chars.Hash: return '\\#';
+      case Chars.At: return '\\@';
+      default:
+          if (!mustEscape(code)) return fromCodePoint(code);
+          if (code < 0x10) return `\\x0${code.toString(16)}`;
+          if (code < 0x100) return `\\x${code.toString(16)}`;
+          if (code < 0x1000) return `\\u0${code.toString(16)}`;
+          if (code < 0x10000) return `\\u${code.toString(16)}`;
+          return `\\u{${code.toString(16)}}`;
+  }
 }

@@ -209,6 +209,9 @@ System.register('cherow', [], function (exports, module) {
             function isValidIdentifierPart(code) {
                 return (convert[(code >>> 5) + 0] >>> code & 31 & 1) !== 0;
             }
+            function mustEscape(code) {
+                return (convert[(code >>> 5) + 69632] >>> code & 31 & 1) !== 0;
+            }
             const convert = ((compressed, lookup) => {
                 const result = new Uint32Array(104448);
                 let index = 0;
@@ -521,6 +524,38 @@ System.register('cherow', [], function (exports, module) {
                         return 1024 /* UnicodeMode */;
                 }
                 return state;
+            }
+            function mapToToken(token) {
+                return (parser) => {
+                    parser.index++;
+                    parser.column++;
+                    return token;
+                };
+            }
+            function escapeForPrinting(code) {
+                switch (code) {
+                    case 0 /* Null */: return "\\0";
+                    case 8 /* Backspace */: return "\\b";
+                    case 9 /* Tab */: return "\\t";
+                    case 10 /* LineFeed */: return "\\n";
+                    case 11 /* VerticalTab */: return "\\v";
+                    case 12 /* FormFeed */: return "\\f";
+                    case 13 /* CarriageReturn */: return "\\r";
+                    case 35 /* Hash */: return "\\#";
+                    case 64 /* At */: return "\\@";
+                    default:
+                        if (!mustEscape(code))
+                            return fromCodePoint(code);
+                        if (code < 0x10)
+                            return `\\x0${code.toString(16)}`;
+                        if (code < 0x100)
+                            return `\\x${code.toString(16)}`;
+                        if (code < 0x1000)
+                            return `\\u0${code.toString(16)}`;
+                        if (code < 0x10000)
+                            return `\\u${code.toString(16)}`;
+                        return `\\u{${code.toString(16)}}`;
+                }
             }
 
             const isIdentifierPart = (code) => isValidIdentifierPart(code) ||
@@ -1005,7 +1040,10 @@ System.register('cherow', [], function (exports, module) {
                 return 2097152 /* NumericLiteral */;
             }
 
-            const table$1 = new Array(128).fill(() => 131072 /* EndOfSource */);
+            function impossible(parser, context) {
+                recordErrors(parser, context, 1 /* UnexpectedToken */, escapeForPrinting(nextUnicodeChar(parser)));
+            }
+            const table$1 = new Array(128).fill(impossible, 0, 0xFFFF);
             table$1[32 /* Space */] =
                 table$1[9 /* Tab */] =
                     table$1[12 /* FormFeed */] =
@@ -1023,14 +1061,6 @@ System.register('cherow', [], function (exports, module) {
                             parser.flags |= 1 /* NewLine */;
                             return 524288 /* WhiteSpace */;
                         };
-            /** Punctuators */
-            function mapToToken(token) {
-                return (parser) => {
-                    parser.index++;
-                    parser.column++;
-                    return token;
-                };
-            }
             // `,`
             table$1[44 /* Comma */] = mapToToken(33554447 /* Comma */);
             // `~`
