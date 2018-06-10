@@ -80,12 +80,16 @@ export function parseSource(
     source: string,
     options: Options | void,
     /*@internal*/
-    context: Context,
-    ecma?: EcmaVersion | void): ESTree.Program {
+    context: Context): ESTree.Program {
     let onError: OnError;
     let onComment: OnComment;
     let sourceFile: string = '';
+    
+
     if (options !== undefined) {
+        // The option to specify ecamVersion
+        let ecmaVersion = options.ecmaVersion || 10;
+        options.ecmaVersion = <EcmaVersion>(ecmaVersion > 2009 ? ecmaVersion - 2009 : ecmaVersion);
         // The flag to enable module syntax support
         if (options.module) context |= Context.Module;
         // The flag to enable stage 3 support (ESNext)
@@ -122,9 +126,6 @@ export function parseSource(
         if (options.onComment != null) onComment = options.onComment;
     }
 
-    // Todo: Fix ECMA versioning.
-    let todo = ecma;
-
     // Create the parser object
     const parser = createParserObject(source, onComment, onError);
     const body = (context & Context.Module) === Context.Module ?
@@ -160,8 +161,8 @@ export function parse(source: string, options?: Options): ESTree.Program {
  * @param source source code to parse
  * @param options parser options
  */
-export function parseScript(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program {
-    return parseSource(source, options, Context.Empty, ecma);
+export function parseScript(source: string, options?: Options): ESTree.Program {
+    return parseSource(source, options, Context.Empty);
 }
 
 /**
@@ -172,8 +173,8 @@ export function parseScript(source: string, options?: Options, ecma?: EcmaVersio
  * @param source source code to parse
  * @param options parser options
  */
-export function parseModule(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program {
-    return parseSource(source, options, Context.Strict | Context.Module, ecma);
+export function parseModule(source: string, options?: Options): ESTree.Program {
+    return parseSource(source, options, Context.Strict | Context.Module);
 }
 
 /**
