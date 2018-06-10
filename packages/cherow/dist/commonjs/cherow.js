@@ -5053,7 +5053,7 @@ function createParserObject(source, onComment, onError) {
  */
 function parseSource(source, options, 
 /*@internal*/
-context) {
+context, ecma) {
     let onError;
     let onComment;
     let sourceFile = '';
@@ -5146,8 +5146,8 @@ function parse(source, options) {
  * @param source source code to parse
  * @param options parser options
  */
-function parseScript(source, options) {
-    return parseSource(source, options, 0 /* Empty */);
+function parseScript(source, options, ecma) {
+    return parseSource(source, options, 0 /* Empty */, ecma);
 }
 /**
  * Parse module code
@@ -5157,8 +5157,8 @@ function parseScript(source, options) {
  * @param source source code to parse
  * @param options parser options
  */
-function parseModule(source, options) {
-    return parseSource(source, options, 32768 /* Strict */ | 65536 /* Module */);
+function parseModule(source, options, ecma) {
+    return parseSource(source, options, 32768 /* Strict */ | 65536 /* Module */, ecma);
 }
 /**
  * Validate regular expressions

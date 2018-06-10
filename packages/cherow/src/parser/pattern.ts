@@ -3,19 +3,13 @@ import { Token, tokenDesc } from '../token';
 import * as ESTree from '../estree';
 import { Errors, recordErrors, } from '../errors';
 import { parseVariableDeclaration } from './declarations';
-import {
-    parseComputedPropertyName,
-    parseAssignmentExpression,
-    parsePropertyName
+import { parseComputedPropertyName, parseAssignmentExpression,
 } from './expressions';
 import {
     Context,
     Flags,
     BindingType,
     BindingOrigin,
-    ModifierState,
-    setContext,
-    swapContext,
     consume,
     expect,
     nextToken,

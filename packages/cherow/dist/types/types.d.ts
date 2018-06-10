@@ -2,6 +2,10 @@ import { Token } from './token';
 import { Flags, LabelState } from './common';
 import { Comment } from './estree';
 /**
+ * `ECMAScript version
+ */
+export declare type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
+/**
  * `onError` option.
  */
 export declare type OnError = (error: string, line: number, column: number) => void;

@@ -1,5 +1,5 @@
 import { Context } from '../common';
-import { Parser, OnError, Options, OnComment } from '../types';
+import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 /**
  * Creates the parser object
@@ -15,7 +15,7 @@ export declare function createParserObject(source: string, onComment?: OnComment
  * @param options The parser options
  * @param context Context masks
  */
-export declare function parseSource(source: string, options: Options | void, context: Context): ESTree.Program;
+export declare function parseSource(source: string, options: Options | void, context: Context, ecma: EcmaVersion | void): ESTree.Program;
 /**
  * Parse either script code or module code
  *
@@ -34,7 +34,7 @@ export declare function parse(source: string, options?: Options): ESTree.Program
  * @param source source code to parse
  * @param options parser options
  */
-export declare function parseScript(source: string, options?: Options): ESTree.Program;
+export declare function parseScript(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program;
 /**
  * Parse module code
  *
@@ -43,7 +43,7 @@ export declare function parseScript(source: string, options?: Options): ESTree.P
  * @param source source code to parse
  * @param options parser options
  */
-export declare function parseModule(source: string, options?: Options): ESTree.Program;
+export declare function parseModule(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program;
 /**
  * Validate regular expressions
  *

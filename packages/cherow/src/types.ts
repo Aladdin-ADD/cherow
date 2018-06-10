@@ -3,6 +3,12 @@ import { Flags, LabelState } from './common';
 import { Comment } from './estree';
 
 /**
+ * `ECMAScript version
+ */
+export type EcmaVersion = 1 | 2 | 3 | 4 | 5 | 2015 | 2016 | 2017 | 2018 | 2019 | 2020;
+
+
+/**
  * `onError` option.
  */
 export type OnError = (error: string, line: number, column: number) => void;
@@ -67,6 +73,7 @@ export interface Options {
     // Enable web compat
     webcompat?: boolean;
 
+    // Option to enable either array or callback for comments
     onComment?: OnComment;
   }
 

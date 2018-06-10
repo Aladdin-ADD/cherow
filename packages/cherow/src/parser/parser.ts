@@ -1,6 +1,6 @@
 import { Token } from '../token';
 import { Context, Flags, LabelState } from '../common';
-import { Parser, OnError, Options, OnComment } from '../types';
+import { Parser, OnError, Options, OnComment, EcmaVersion } from '../types';
 import * as ESTree from '../estree';
 import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
@@ -75,7 +75,8 @@ export function parseSource(
     source: string,
     options: Options | void,
     /*@internal*/
-    context: Context): ESTree.Program {
+    context: Context,
+    ecma: EcmaVersion | void): ESTree.Program {
     let onError: any;
     let onComment: OnComment;
     let sourceFile: string = '';
@@ -118,6 +119,9 @@ export function parseSource(
         if (options.onComment != null) onComment = options.onComment;
     }
 
+    // Todo: Fix ECMA versioning.
+    let todo = ecma;
+
     // Create the parser object
     const parser = createParserObject(source, onComment, onError);
     const body = (context & Context.Module) === Context.Module ?
@@ -153,8 +157,8 @@ export function parse(source: string, options?: Options): ESTree.Program {
  * @param source source code to parse
  * @param options parser options
  */
-export function parseScript(source: string, options?: Options): ESTree.Program {
-    return parseSource(source, options, Context.Empty);
+export function parseScript(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program {
+    return parseSource(source, options, Context.Empty, ecma);
 }
 
 /**
@@ -165,8 +169,8 @@ export function parseScript(source: string, options?: Options): ESTree.Program {
  * @param source source code to parse
  * @param options parser options
  */
-export function parseModule(source: string, options?: Options): ESTree.Program {
-    return parseSource(source, options, Context.Strict | Context.Module);
+export function parseModule(source: string, options?: Options, ecma?: EcmaVersion): ESTree.Program {
+    return parseSource(source, options, Context.Strict | Context.Module, ecma);
 }
 
 /**
