@@ -14,7 +14,7 @@ function unreachable(parser: Parser, context: Context): void {
   recordErrors(parser, context, Errors.UnexpectedToken, escapeInvalidCharacters(nextUnicodeChar(parser)));
 }
 
-const table = new Array(128).fill(unreachable, 0, 0xFFFF) as((parser: Parser, context: Context, first: number) => Token)[];
+const table = new Array(0xFFFF).fill(unreachable, 0, 128).fill(scanMaybeIdentifier, 128) as((parser: Parser, context: Context, first: number) => Token)[];
 
 // `,`, `~`, `?`, `[`, `]`, `{`, `}`, `:`, `;`, `(` ,`)`, `"`, `'`
 table[Chars.Comma] = mapToToken(Token.Comma);
@@ -331,12 +331,11 @@ export function nextToken(parser: Parser, context: Context): Token {
   parser.lastColumn = parser.column;
   let token: Token;
   while (parser.index < parser.length) {
-      const first = parser.source.charCodeAt(parser.index);
       parser.startIndex = parser.index;
       parser.startColumn = parser.column;
       parser.startLine = parser.line;
-      if (first < 128) token = table[first](parser, context, first);
-      else token = scanMaybeIdentifier(parser, context, first);
+      const first = parser.source.charCodeAt(parser.index);
+      token = table[first](parser, context, first);
       if ((token & Token.WhiteSpace) === Token.WhiteSpace) continue;
       return parser.token = token;
   }

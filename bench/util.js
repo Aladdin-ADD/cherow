@@ -1,3 +1,16 @@
+let allowNatives = process.execArgv.indexOf('--allow-natives-syntax') >= 0;
+let v8;
+if (allowNatives) {
+  v8 = require('./v8-native-calls.js').v8
+  console.log('Running with --allow-natives-syntax, JIT optimizations will be disabled wherever they can');
+} else {
+  console.log('Not running with --allow-natives-syntax, JIT optimizations will not be disabled');
+}
+
+const fs = require('fs');
+const path = require('path');
+const scriptFile = process.argv[1];
+const benchDir = path.parse(scriptFile).dir;
 
 const colors = {
   Reset: '\x1b[0m',
@@ -82,6 +95,9 @@ class Benchmark {
   }
 
   addResult(res) {
+    if (allowNatives) {
+      v8.collectGarbage();
+    }
     if (res) {
       this.elapsed[this.sutIndex] = res[0] * 10e8 + res[1];
       if (this.sutIndex === 2 && this.elapsed[0] && this.elapsed[1] && this.elapsed[2]) {
@@ -144,7 +160,7 @@ class Benchmark {
     this.output = this.test.weight > 1 ? colors.Bright : '';
     this.output += this.col.pad(this.test.weight, this.col.width);
     this.nextCol();
-    this.output += this.col.pad(this.test.expr, this.col.width).slice(0, this.col.width) + colors.Reset;
+    this.output += this.col.pad(this.test.expr.replace(/\r?\n/g, ''), this.col.width).slice(0, this.col.width) + colors.Reset;
     this.nextCol();
   }
 
@@ -192,5 +208,29 @@ class Benchmark {
   }
 }
 
+function disableOptimizations(parser) {
+  if (allowNatives) {
+    for (const prop in parser) {
+      v8.neverOptimizeFunction(parser[prop]);
+    }
+  }
+}
+
+function rewriteExports(file) {
+  const filePath = path.resolve(benchDir, file + '.js');
+  const newFilePath = filePath.slice(0, filePath.length - 3) + '-rewritten.js';
+  const content = fs.readFileSync(filePath, { encoding: 'utf-8' });
+  const reg = /^(const|function) ([a-zA-Z0-9$_]+).*/;
+  let $exports = '';
+  for (let line of content.split(/\r?\n/)) {
+    if (reg.test(line)) {
+      $exports += line.replace(reg, '\nexports.$2 = $2;');
+    }
+  }
+  fs.writeFileSync(newFilePath, content + $exports, { encoding: 'utf-8' });
+}
+
 module.exports.Column = Column;
 module.exports.Benchmark = Benchmark;
+module.exports.disableOptimizations = disableOptimizations;
+module.exports.rewriteExports = rewriteExports;
