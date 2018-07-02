@@ -842,6 +842,7 @@ export function parseIdentifier(parser: Parser, context: Context): ESTree.Identi
 export function parseLiteral(parser: Parser, context: Context): ESTree.Literal {
     const pos = getLocation(parser);
     const { tokenValue, tokenRaw } = parser;
+    if (context & Context.Strict && parser.flags & Flags.HasOctal) report(parser, Errors.StrictOctalEscape);
     parser.flags &= ~Flags.Assignable;
     nextToken(parser, context);
     const node: any = finishNode(parser, context, pos, {
@@ -978,7 +979,7 @@ function parseArrayLiteral(parser: Parser, context: Context): ESTree.ArrayExpres
     //
     const pos = getLocation(parser);
     expect(parser, context, Token.LeftBracket);
-    context = (context | Context.DisallowIn | Context.Asi) ^ (Context.DisallowIn | Context.Asi);
+    context = (context | Context.DisallowIn) ^ Context.DisallowIn;
     const elements: (ESTree.Expression | ESTree.SpreadElement | null)[] = [];
 
     while (parser.token !== Token.RightBracket) {
@@ -1112,7 +1113,7 @@ function parseFunctionBody(parser: Parser, context: Context): ESTree.BlockStatem
         while (parser.token === Token.StringLiteral) {
             const { tokenRaw, tokenValue } = parser;
             body.push(parseDirective(parser, context));
-            if (tokenRaw.length === /* length of prologue*/ 12 && tokenValue === 'use strict') {
+            if (tokenValue.length === 10 && tokenValue === 'use strict') {
                 if (parser.flags & Flags.SimpleParameterList) {
                     recordErrors(parser, context, Errors.IllegalUseStrict);
                 } else if (parser.flags & Flags.StrictReserved) {
@@ -1367,7 +1368,7 @@ export function parseObjectLiteral(parser: Parser, context: Context): ESTree.Obj
     const pos = getLocation(parser);
     expect(parser, context, Token.LeftBrace);
     const properties: (ESTree.Property | ESTree.SpreadElement)[] = [];
-    context = (context | Context.DisallowIn | Context.Asi) ^ (Context.DisallowIn | Context.Asi);
+    context = (context | Context.DisallowIn) ^ Context.DisallowIn;
     while (parser.token !== Token.RightBrace) {
         properties.push(parser.token === Token.Ellipsis ?
             parseSpreadProperties(parser, context) :

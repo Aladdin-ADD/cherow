@@ -17,7 +17,7 @@ describe('Lexer - String literals', () => {
 
     for (const [ctx, source, token, parsed] of inputData) {
         it(`scans '${source}'`, () => {
-            const parser = createParserObject(source, undefined);
+            const parser = createParserObject(source, undefined, undefined, undefined);
             const found = nextToken(parser, ctx);
             t.deepEqual({
                 value: parser.tokenValue,
@@ -36,7 +36,7 @@ describe('Lexer - String literals', () => {
     function test(name: string, context: Context) {
         it(name, () => {
             if (opts.strict !== true) {
-                const parser = createParserObject(opts.source, undefined);
+                const parser = createParserObject(opts.source, undefined, undefined, undefined);
 
                 t.deepEqual({
                     token: nextToken(parser, context),
@@ -57,7 +57,7 @@ describe('Lexer - String literals', () => {
 
 function fail(name: string, context: Context, opts: any): any {
   it(name, () => {
-      const parser = createParserObject(opts.source, undefined);
+      const parser = createParserObject(opts.source, undefined, undefined, undefined);
       t.throws(() => {
           nextToken(parser, context)
       });

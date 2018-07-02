@@ -6,7 +6,9 @@
 	"devDependencies": {
 		"@types/mocha": "^5.2.2",
 		"@types/node": "^10.3.3",
+		"commitizen": "^2.10.1",
 		"coveralls": "^3.0.1",
+		"cz-conventional-changelog": "^2.1.0",
 		"lerna": "^2.9.0",
 		"mocha": "^5.2.0",
 		"nps": "^5.9.0",
@@ -24,8 +26,14 @@
 		"tslint": "^5.10.0",
 		"tslint-microsoft-contrib": "^5.0.3",
 		"typescript": "^2.9.2"
-  },
-  "scripts": {
-    "bench": "node --allow-natives-syntax bench/bench.js 100"
-  }
+	},
+	"scripts": {
+		"bench": "node --allow-natives-syntax bench/bench.js 100",
+		"commit": "git-cz"
+	},
+	"config": {
+		"commitizen": {
+			"path": "./node_modules/cz-conventional-changelog"
+		}
+	}
 }

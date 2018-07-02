@@ -4,11 +4,7 @@ import { Parser, OnError, Options, OnComment } from '../types';
 import * as ESTree from '../estree';
 import { parseStatementList } from './statements';
 import { parseModuleItemList } from './module';
-import { Chars } from '../chars';
-import { consumeOpt, RegexpState, skipBomAndShebang } from '../lexer/common';
-import { verifyRegExpPattern } from '../lexer/regexp';
-import { Errors, recordErrors, } from '../errors';
-import { doLexicalAnalysis } from './tokenize';
+import { skipBomAndShebang } from '../lexer/common';
 
 /**
  * Creates the parser object
@@ -18,8 +14,9 @@ import { doLexicalAnalysis } from './tokenize';
  */
 export function createParserObject(
   source: string,
-  onComment?: OnComment,
-  onError?: OnError,
+  onComment: OnComment | void,
+  onError: OnError | void,
+  sourceFile: string | void,
 ): Parser {
     return {
         // The source code to parse
@@ -60,6 +57,7 @@ export function createParserObject(
         capturingParens: 0,
         largestBackReference: 0,
         lastValue: 0,
+        sourceFile,
         // Misc
         token: Token.EndOfSource,
         tokenValue: undefined,
@@ -86,6 +84,7 @@ export function parseSource(
   let onError: OnError;
   let onComment: OnComment;
   let sourceFile: string = '';
+
   if (options !== undefined) {
       // The flag to enable module syntax support
       if (options.module) context |= Context.Module;
@@ -122,8 +121,10 @@ export function parseSource(
   }
 
   // Create the parser object
-  const parser = createParserObject(source, onComment, onError);
+  const parser = createParserObject(source, onComment, onError, sourceFile);
+
   skipBomAndShebang(parser, context);
+
   const body = (context & Context.Module) === Context.Module ?
       parseModuleItemList(parser, context) : parseStatementList(parser, context);
 
@@ -194,39 +195,4 @@ export function parseScript(source: string, options?: Options): ESTree.Program {
  */
 export function parseModule(source: string, options?: Options): ESTree.Program {
     return parseSource(source, options, Context.Strict | Context.Module);
-}
-
-/**
- * Validate regular expressions
- *
- * @see [Link](https://tc39.github.io/ecma262/#sec-modules)
- *
- * @param source source code to parse
- * @param options parser options
- */
-export function validateRegExp(source: string, options?: Options): boolean {
-    // Create the parser object
-    const parser = createParserObject(source, undefined, undefined);
-
-    let context = Context.Empty;
-
-    if (options !== undefined) {
-        // The flag to enable editor mode
-        if (options.edit) context |= Context.OptionsEditorMode;
-    }
-
-    if (!consumeOpt(parser, Chars.Slash)) recordErrors(parser, context, Errors.InvalidRegularExp);
-    const { state } = verifyRegExpPattern(parser, context);
-    if (state === RegexpState.Invalid) recordErrors(parser, context, Errors.InvalidRegularExp);
-    return (state === RegexpState.Valid) ? true : false;
-}
-
-/**
- *  Performs lexical analysis (tokenization)
- *
- * @param source source code to parse
- * @param options parser options
- */
-export function tokenize(): any {
-  return doLexicalAnalysis();
 }

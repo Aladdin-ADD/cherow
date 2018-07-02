@@ -211,7 +211,7 @@ export const enum Token {
 // utter hack.
 //
 // All to lower it to a single monomorphic array access.
-const KeywordDescTable = [
+export const KeywordDescTable = [
     'end of source',
 
     /* Constants/Bindings */

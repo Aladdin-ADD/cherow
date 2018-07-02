@@ -8,7 +8,7 @@ describe('Lexer - Shebang and BOM', () => {
 
     function pass(name: string, opts: any) {
         it(name, () => {
-            const parser = createParserObject(opts.source);
+            const parser = createParserObject(opts.source, undefined, undefined, undefined);
             const token = skipBomAndShebang(parser, Context.OptionsShebang);
             t.deepEqual({
                 line: parser.line,

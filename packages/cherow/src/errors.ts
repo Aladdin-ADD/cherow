@@ -8,6 +8,7 @@ export const enum Errors {
     InvalidOrUnexpectedToken,
     UnterminatedString,
     StrictOctalEscape,
+    UnterminatedComment,
     InvalidEightAndNine,
     ContinuousNumericSeparator,
     TrailingNumericSeparator,
@@ -129,7 +130,8 @@ export const errorMessages: {
     [Errors.GeneratorInSingleStatementContext]: 'Generators can only be declared at the top level or inside a block.',
     [Errors.UnexpectedTokenNumber]: 'Unexpected number' ,
     [Errors.UnexpectedTokenIdentifier]: 'Unexpected identifier' ,
-    [Errors.InvalidEscapedReservedWord]: 'Keyword must not contain escaped characters' ,
+    [Errors.InvalidEscapedReservedWord]: 'Keyword must not contain escaped characters',
+    [Errors.UnterminatedComment]: 'Unterminated MultiLineComment',
 };
 
 export function constructError(index: number, line: number, column: number, description: string): void {

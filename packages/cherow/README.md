@@ -32,7 +32,7 @@ A very fast and lightweight, standards-compliant, self-hosted javascript parser 
 
 * [Import()](https://github.com/tc39/proposal-dynamic-import)
 * [Class field declarations for JavaScript](https://github.com/tc39/proposal-class-fields)
-* [Numeric Separators](https://github.com/tc39/proposal-numeric-separator)
+* ~~[Numeric Separators](https://github.com/tc39/proposal-numeric-separator)~~ (removed in 2.0, since it was back down to stage 2)
 * [Private methods and getter/setters for JavaScript classes](https://github.com/tc39/proposal-private-methods)
 * [BigInt](https://github.com/tc39/proposal-bigint)
 * [Import.meta](https://github.com/tc39/proposal-import-meta)

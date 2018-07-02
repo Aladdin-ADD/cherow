@@ -8,7 +8,7 @@ describe('Lexer - BigInt', () => {
 
       function fail(name: string, context: Context, opts: any): any {
           it(name, () => {
-              const parser = createParserObject(opts.source, undefined);
+              const parser = createParserObject(opts.source, undefined, undefined, undefined);
               t.throws(() => {
                   nextToken(parser, context)
               });

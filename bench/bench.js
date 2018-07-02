@@ -39,6 +39,7 @@ const tests = [
   { weight:  3,  imports: [V1, V2, V2New], expr: `var baz = a*b/c+d-e;` },
   { weight:  3,  imports: [V1, V2, V2New], expr: `foo.bar.baz.qux;` },
   { weight:  1,  imports: [V1, V2, V2New], expr: `class Qux {\n}` },
+  { weight:  1,  imports: [V1, V2, V2New], expr: `/a(.?)b\\1c\\1d\\1/` },
   { weight:  2,  imports: [V1, V2, V2New], expr: `class Quux {\n    corge() {\n    }\n}` },
   { weight:  5,  imports: [V1, V2, V2New], expr: `class Grault{constructor(name){this.name = name;}}` },
   { weight:  3,  imports: [V1, V2, V2New], expr: `var grault = {foo,bar};` },

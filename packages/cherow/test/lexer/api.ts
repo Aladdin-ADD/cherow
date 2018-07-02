@@ -7,31 +7,31 @@ describe('Charow API', () => {
 
         it('Esprima is not a valid regular expression', () => {
             t.throws(() => {
-                validateRegExp('esprima', undefined);
+                validateRegExp('esprima');
             });
         });
 
         it('should throw if missing slash at the start', () => {
             t.throws(() => {
-                validateRegExp('a/', undefined);
+                validateRegExp('a/');
             });
         });
 
         it('should validate regular expression successfully', () => {
             t.doesNotThrow(() => {
-                validateRegExp('/a/', undefined);
+                validateRegExp('/a/');
             });
         });
 
         it('should throw on invalid unicode regular expression', () => {
             t.throws(() => {
-                validateRegExp('/\\03b/u', undefined);
+                validateRegExp('/\\03b/u');
             });
         });
 
         it('should validate a complex regular expression successfully', () => {
             t.doesNotThrow(() => {
-                validateRegExp('/^^^^^^^robot$$$$/u', undefined);
+                validateRegExp('/^^^^^^^robot$$$$/u');
             });
         });
     });

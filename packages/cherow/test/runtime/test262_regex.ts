@@ -1,32 +1,8 @@
 import * as t from 'assert';
-import { verifyRegExpPattern } from '../../../src/lexer/regexp';
-import { createParserObject } from '../../../src/parser/parser';
-import { Context } from '../../../src/common';
-import { RegexpState } from '../../../src/lexer/common';
-
-
-function isValidAlphaEscapeInAtom(s: any): any {
-  switch (s) {
-      // ClassEscape[U] :: b
-      case "b":
-          // ControlEscape :: one of f n r t v
-      case "f":
-      case "n":
-      case "r":
-      case "t":
-      case "v":
-          // CharacterClassEscape :: one of d D s S w W
-      case "d":
-      case "D":
-      case "s":
-      case "S":
-      case "w":
-      case "W":
-          return true;
-      default:
-          return false;
-  }
-}
+import { verifyRegExpPattern } from '../../src/lexer/regexp';
+import { createParserObject } from '../../src/parser/parser';
+import { Context } from '../../src/common';
+import { RegexpState } from '../../src/runtime/common';
 
 function isSyntaxCharacter(c: string): boolean {
   switch (c) {
@@ -58,7 +34,7 @@ describe('Lexer - Regeular expressions', () => {
     const s = String.fromCharCode(cu);
     if (!isAlphaDigit(s) && !isSyntaxCharacter(s) && s !== "/") {
         it(`scans '[\\c${s}]/u'`, () => {
-            const parser = createParserObject(`[\\c${s}]/u`, undefined);
+            const parser = createParserObject(`[\\c${s}]/u`, undefined, undefined, undefined);
             const { state } = verifyRegExpPattern(parser, Context.OptionsEditorMode);
 
             t.deepEqual({

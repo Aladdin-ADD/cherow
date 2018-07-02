@@ -1,5 +1,4 @@
 import * as t from 'assert';
-import { pass } from '../../test-utils';
 import { Context } from '../../../src/common';
 import { parseSource } from '../../../src/parser/parser';
 

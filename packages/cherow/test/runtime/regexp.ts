@@ -1,14 +1,17 @@
 import * as t from 'assert';
-import { verifyRegExpPattern } from '../../../src/lexer/regexp';
-import { createParserObject } from '../../../src/parser/parser';
-import { Context } from '../../../src/common';
-import { RegexpState } from '../../../src/lexer/common';
+import { verifyRegExpPattern } from '../../src/lexer/regexp';
+import { createParserObject } from '../../src/parser/parser';
+import { Context } from '../../src/common';
+import { RegexpState } from '../../src/runtime/common';
 
 describe('Lexer - Regeular expressions', () => {
 
   describe('Unicode - Invalid', () => {
       const invalidCases = [
 
+          'a\n/',
+          `a\r
+          /`,
           'a\\1/',
           '(a)\\2/',
           '((a))\\3/',
@@ -590,13 +593,20 @@ describe('Lexer - Regeular expressions', () => {
           '\\N',
           '\\O',
           '\\P',
-          '\\11|(a)/', '(\\12|a)/', '(a|\\13)/'
-
+          '\\11|(a)/', '(\\12|a)/', '(a|\\13)/',
+          '[\\db-G]/',
+          '[b-G\\10]/',
+          '[d-G\\b]/',
+          '[d-G\\B]/',
+          '[d-G\\n]/',
+          '[d-G\\v]/',
+          '[d-G\\r]/',
+          '[\\sb-G]/',
       ];
 
       for (const arg of invalidCases) {
           it(`${arg}`, () => {
-              const parser = createParserObject(`${arg}`, undefined);
+              const parser = createParserObject(`${arg}`, undefined, undefined, undefined);
               const {
                   state
               } = verifyRegExpPattern(parser, Context.OptionsEditorMode);
@@ -614,6 +624,90 @@ describe('Lexer - Regeular expressions', () => {
   describe('Unicode - Valid', () => {
 
       const validCases = [
+           'a|ab/',
+           'xyz|.../',
+           '(.)..|abc/',
+           '.+: gr(a|e)y/',
+           '()|/',
+           'ab|cd|ef/',
+           '(aa|aabaac|ba|b|c)*/',
+           '(a*)b\\1+/',
+           '(.{3})(.{4})/',
+           '\\v/',
+           '\\t/m',
+           'e$/',
+           '^p[a-z]/',
+           '^xxx/',
+           '\\bop/',
+           'op\\b/',
+           'so\\b/',
+           '[f-z]e\\B/',
+           '\\Bo\\B/i',
+           '\\B\\w\\B/',
+           '\\B[^z]{4}\\B/',
+           '^.*?$/',
+           '^.*?/',
+           '\\d{2,4}/',
+           'b{0,93}c/',
+           'bx{0,93}c/',
+           '\\d{2,4}/',
+           'o+/',
+           '\\s+java\\s+/',
+           '[a-z]+\\d+/',
+           'cx*d/',
+           '(x*)(x+)/',
+           '(\\d*)(\\d+)/',
+           '(\\d*)\\d(\\d+)/',
+           '[\\d]*[\\s]*bc./',
+           '.*/',
+           '\\n/',
+           '\\n\\n/',
+           '\\r/',
+           '\\r\\r/',
+           '\\S+/g',
+           '\\x00/',
+           '\\x01/',
+           '\\x0A/',
+           '\\xFF/',
+           '\\x41/',
+           '\\x45/',
+           '\\x4E/',
+           '\\x53/',
+           '\\x64/',
+           '\\x75/',
+           '\\x57/',
+           '\\u0000/',
+           '\\u0001/',
+           '\\u000A/',
+           '\\u00FF/',
+           '\\u0FFF/',
+           '\\uFFFF/',
+           '\\B\\w/',
+           '^.*(:|$)/',
+           '.{0,93}/',
+           '\\d{2,4}/',
+           'cd?e/',
+           '(\.(?!com|org)|\\/)/',
+           '(a(b(c)))(d(e(f)))\\2\\5/',
+           'a(.?)b\\1c\\1d\\1/',
+           '(A)\\1/',
+           '(A)\\1/',
+           '\\1(A)/',
+           '((((((((((A))))))))))\\1\\2\\3\\4\\5\\6\\7\\8\\9\\10/',
+           '\\s+/g',
+           '\\s/',
+           '\\S/',
+           '\\w/',
+           '\\W+/g',
+           '\\D/g',
+           '[a-z][^1-9][a-z]/',
+           '[*&$]{3}/',
+           '[1234567].{2}/',
+           '[^]a/m',
+           '[^]a/m',
+           '[^]/',
+           '[^\\[\\b\\]]+/',
+           '\\u0001/',
           '[x\\da-z]/u',
           '[x\\DA-Z]/u',
           `[o-o]/`,
@@ -1229,9 +1323,9 @@ describe('Lexer - Regeular expressions', () => {
           '\\D/',
           '\\]/',
           '\\{/',
-          // '^a-zA-Z]*$/',
-          // '^a-zA-Z]*$/',
-          // '^0-9]+$/',
+          '[^a-zA-Z]*$/',
+          '[^a-zA-Z]*$/',
+          '[^0-9]+$/',
           // '\\/',
           '\\v/',
           '()|/',
@@ -1247,7 +1341,7 @@ describe('Lexer - Regeular expressions', () => {
           'a+?/',
           'a*?/',
           'a{1,2}/',
-          //        '^-J]/ug',
+          '[^-J]/ug',
           // '^-fdsasgJ]/g',
           'oo/i',
           '\\D/',
@@ -2038,7 +2132,7 @@ describe('Lexer - Regeular expressions', () => {
 
       for (const arg of validCases) {
           it(`${arg}`, () => {
-              const parser = createParserObject(`${arg}`, undefined);
+              const parser = createParserObject(`${arg}`, undefined, undefined, undefined);
               const {
                   state
               } = verifyRegExpPattern(parser, Context.OptionsEditorMode);

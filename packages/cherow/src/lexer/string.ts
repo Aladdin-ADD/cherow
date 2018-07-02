@@ -48,7 +48,7 @@ export function scanStringLiteral(parser: Parser, context: Context, quote: numbe
 
   parser.index++;
   parser.column++; // Consume the quote
-  parser.tokenRaw = parser.source.slice(start, parser.index);
+  if (context & Context.OptionsRaw) parser.tokenRaw = parser.source.slice(start, parser.index);
   parser.tokenValue = ret;
   parser.lastValue = lastValue;
 
@@ -100,7 +100,6 @@ table[Chars.Zero] = table[Chars.One] = table[Chars.Two] =  table[Chars.Three] = 
       let code = first - Chars.Zero;
       let index = parser.index + 1;
       let column = parser.column + 1;
-
       if (index < parser.source.length) {
           let next = parser.source.charCodeAt(index);
           if (next < Chars.Zero || next > Chars.Seven) {
@@ -113,6 +112,7 @@ table[Chars.Zero] = table[Chars.One] = table[Chars.Two] =  table[Chars.Three] = 
           } else if (context & Context.Strict) {
               return Escape.StrictOctal;
           } else {
+              parser.flags = parser.flags | Flags.HasOctal;
               parser.lastValue = next;
               code = code * 8 + (next - Chars.Zero);
               index++;

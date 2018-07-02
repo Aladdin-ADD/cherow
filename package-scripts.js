@@ -8,7 +8,7 @@ function rollup(mod, minify) {
   return `rollup --c --environment mod:${mod},${minify ? 'minify' : ''}`;
 }
 
-function mocha(files, args) {
+function mocha(files, args='') {
   return crossEnv(`TS_NODE_PROJECT=\'${config('test')}\' mocha "${files}" ${args}`);
 }
 

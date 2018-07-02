@@ -12,6 +12,7 @@ import {
     expect,
     consume,
     consumeSemicolon,
+    LabelledFunctionState,
     BindingType,
     BindingOrigin,
     lookahead,
@@ -28,11 +29,6 @@ import {
     finishNode
 } from '../common';
 
-export const enum LabelledFunctionState {
-    Allow,
-    Disallow,
-}
-
 /**
  * Parse statement list
  *
@@ -45,16 +41,17 @@ export const enum LabelledFunctionState {
 export function parseStatementList(parser: Parser, context: Context): ESTree.Statement[] {
     nextToken(parser, context);
     const statements: ESTree.Statement[] = [];
+
+    while ((parser.token & Token.StringLiteral) === Token.StringLiteral) {
+      const { tokenValue: value } = parser;
+      if (!(context & Context.Strict) && value.length === 10 && value === 'use strict') {
+            context |= Context.Strict;
+      }
+      statements.push(parseDirective(parser, context));
+    }
+
     while (parser.token !== Token.EndOfSource) {
-        if ((parser.token & Token.StringLiteral) === Token.StringLiteral) {
-            if (!(context & Context.Strict) &&
-                  parser.tokenRaw.length === 12 && parser.tokenValue === 'use strict') {
-                context |= Context.Strict;
-            }
-            statements.push(parseDirective(parser, context));
-        } else {
-            statements.push(parseStatementListItem(parser, context));
-        }
+      statements.push(parseStatementListItem(parser, context));
     }
 
     return statements;
@@ -69,7 +66,7 @@ export function parseStatementList(parser: Parser, context: Context): ESTree.Sta
  * @param context Context masks
  */
 export function parseStatementListItem(parser: Parser, context: Context): ESTree.Statement {
-   // ECMA 262 6th Edition
+   // ECMA 262 8th Edition
   // StatementListItem[Yield, Return] :
   //   Statement[?Yield, ?Return]
   //   Declaration[?Yield]
@@ -769,7 +766,7 @@ function parseAsyncFunctionDeclarationOrStatement(parser: Parser, context: Conte
  */
 export function parseDirective(parser: Parser, context: Context): ESTree.ExpressionStatement {
     const pos = getLocation(parser);
-    const directive = parser.tokenRaw.slice(1, -1);
+    const directive = parser.source.slice(parser.startIndex + 1, parser.index - 1);
     const expr = parseExpression(parser, context);
     consumeSemicolon(parser, context);
     return finishNode(parser, context, pos, {

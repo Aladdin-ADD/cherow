@@ -11,7 +11,7 @@ describe('Lexer - Identifier', () => {
       function test(name: string, context: Context) {
           it(name, () => {
               if (opts.strict !== true) {
-                  const parser = createParserObject(opts.source, undefined);
+                  const parser = createParserObject(opts.source, undefined, undefined, undefined);
                   t.deepEqual({
                       token: nextToken(parser, context),
                       value: parser.tokenValue,
@@ -31,7 +31,7 @@ describe('Lexer - Identifier', () => {
 
   function fail(name: string, context: Context, opts: any): any {
       it(name, () => {
-          const parser = createParserObject(opts.source, undefined);
+          const parser = createParserObject(opts.source, undefined, undefined, undefined);
           t.throws(() => {
               nextToken(parser, context)
           });

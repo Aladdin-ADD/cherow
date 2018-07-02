@@ -6,7 +6,7 @@ describe('Lexer - Private name', () => {
 
   function pass(name: string, opts: any) {
       it(name, () => {
-          const parser = createParserObject(opts.source, undefined);
+          const parser = createParserObject(opts.source, undefined, undefined, undefined);
           const token = scanPrivateName(parser, Context.InClass);
           t.deepEqual({
               line: parser.line,
@@ -22,7 +22,7 @@ describe('Lexer - Private name', () => {
 
   function fail(name: string, context: Context, opts: any) {
       it(name, () => {
-          const parser = createParserObject(opts.source, undefined);
+          const parser = createParserObject(opts.source, undefined, undefined, undefined);
           t.throws(() => {
               scanPrivateName(parser, context)
           });

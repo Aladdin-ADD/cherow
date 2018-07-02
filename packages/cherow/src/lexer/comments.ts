@@ -1,6 +1,6 @@
 import { Token } from '../token';
-import { Context } from '../common';
-import { consumeOpt, advanceNewline } from './common';
+import { Context, Flags } from '../common';
+import { consumeOpt } from './common';
 import { Chars } from '../chars';
 import { Parser } from '../types';
 import { Errors, report } from '../errors';
@@ -29,19 +29,27 @@ export function skipSingleHTMLComment(parser: Parser, context: Context): Token {
  * @param returnToken Token to be returned
  */
 export function skipSingleLineComment(parser: Parser, returnToken: Token = Token.SingleComment): Token {
-
+  let lastIsCR = 0;
   while (parser.index < parser.length) {
-      const ch = parser.source.charCodeAt(parser.index);
-      switch (ch) {
+      switch (parser.source.charCodeAt(parser.index)) {
           case Chars.CarriageReturn:
+              lastIsCR = 2;
           case Chars.LineFeed:
           case Chars.LineSeparator:
           case Chars.ParagraphSeparator:
-              advanceNewline(parser, ch);
+              if (!--lastIsCR) parser.line++;
+              parser.flags |= Flags.NewLine;
+              parser.index++;
+              parser.column = 0;
+              parser.line++;
               return returnToken;
           default:
-              parser.index++;
+              if (lastIsCR) {
+                  parser.line++;
+                  lastIsCR = 0;
+              }
               parser.column++;
+              parser.index++;
       }
   }
 
@@ -56,23 +64,35 @@ export function skipSingleLineComment(parser: Parser, returnToken: Token = Token
  * @param parser Parser object
  */
 export function skipMultilineComment(parser: Parser): any {
-    while (parser.index < parser.length) {
-        const ch = parser.source.charCodeAt(parser.index);
-        switch (ch) {
-            case Chars.Asterisk:
-                parser.index++; parser.column++;
-                if (consumeOpt(parser, Chars.Slash)) return Token.MultiComment;
-                break;
-            case Chars.CarriageReturn:
-            case Chars.LineFeed:
-            case Chars.LineSeparator:
-            case Chars.ParagraphSeparator:
-                advanceNewline(parser, ch);
-                break;
-            default:
-                 parser.index++; parser.column++;
-        }
-    }
+  let lastIsCR = 0;
+  while (parser.index < parser.length) {
+      switch (parser.source.charCodeAt(parser.index)) {
+          case Chars.Asterisk:
+              parser.index++;
+              parser.column++;
+              if (consumeOpt(parser, Chars.Slash)) {
+                return Token.MultiComment;
+              }
+              break;
+          case Chars.CarriageReturn:
+              lastIsCR = 2;
+          case Chars.LineFeed:
+          case Chars.LineSeparator:
+          case Chars.ParagraphSeparator:
+              if (!--lastIsCR) parser.line++;
+              parser.flags |= Flags.NewLine;
+              parser.index++;
+              parser.column = 0;
+              break;
+          default:
+              if (lastIsCR) {
+                  parser.line++;
+                  lastIsCR = 0;
+              }
+              parser.index++;
+              parser.column++;
+      }
+  }
 
-    report(parser, Errors.Unexpected);
+  report(parser, Errors.UnterminatedComment);
 }

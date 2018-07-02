@@ -66,7 +66,7 @@ describe('Lexer - Punctuators', () => {
 
     for (const [context, token, op] of punctuators) {
         it(`should scan '${op}' punctuator`, () => {
-            const parser = createParserObject(op, undefined);
+            const parser = createParserObject(op, undefined, undefined, undefined);
             const punctuator = nextToken(parser, context);
             t.deepEqual({
                 token: tokenDesc(punctuator),

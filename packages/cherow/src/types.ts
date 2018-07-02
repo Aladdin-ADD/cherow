@@ -123,6 +123,7 @@ export interface Parser {
     labelDepth: number;
     priorNode: any;
     lastValue: any;
+    sourceFile: string | void;
     tokenRegExp: void | {
         pattern: string;
         flags: string;

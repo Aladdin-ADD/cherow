@@ -35,7 +35,6 @@ export const enum Context {
     NewTarget            = 1 << 24,
     TaggedTemplate       = 1 << 25,
     Statement            = 1 << 26,
-    Asi                  = 1 << 27,
     AllowSuperProperty   = 1 << 28,
     InClass              = 1 << 29,
     InIf                 = 1 << 30,
@@ -84,11 +83,9 @@ export const enum BindingKind {
     Let,
     Const
 }
-
-/* Recovery state */
-export const enum Recovery {
-    Empty         = 0,
-    Unterminated  = 1 << 0,
+export const enum LabelledFunctionState {
+  Allow,
+  Disallow,
 }
 
 /* Tokenizer state */
@@ -147,13 +144,13 @@ export function consume(parser: Parser, context: Context, token: Token): boolean
 /**
  * Automatic Semicolon Insertion
  *
- * @see [Link](https://tc39.github.io/ecma262/#sec-automatic-semicolon-insertion)
+ * @see [Link](https://tc39.github.io/ecma262/#sec-rules-of-automatic-semicolon-insertion)
  *
  * @param parser Parser object
  * @param context Context masks
  */
 export function consumeSemicolon(parser: Parser, context: Context): void | boolean {
-    return (parser.token & Token.ASI) === Token.ASI || parser.flags & Flags.NewLine
+    return parser.token & Token.ASI || parser.flags & Flags.NewLine
       ? consume(parser, context, Token.Semicolon)
       : recordErrors(parser, context, Errors.Unexpected);
   }
@@ -310,7 +307,16 @@ export function reinterpret(parser: Parser, context: Context, node: any): void {
             node.type = 'AssignmentPattern';
           //  if (node.operator !== '=') recordErrors(parser, context, Errors.InvalidLHSDefaultValue);
             delete node.operator;
+            reinterpret(parser, context, node.left);
             return;
+        case 'Property':
+            reinterpret(parser, context, node.value);
+            return;
+        case 'SpreadElement':
+            node.type = 'RestElement';
+            reinterpret(parser, context, node.argument);
+            return;
+
         default: // ignore
     }
 }
@@ -483,7 +489,7 @@ export function finishNode < T extends ESTree.Node > (
   meta: Location,
   node: any): T {
 
-  const { lastIndex, lastLine, lastColumn } = parser;
+  const { lastIndex, lastLine, lastColumn, sourceFile } = parser;
 
   if (context & Context.OptionsRanges) {
       node.start = meta.index;
@@ -501,6 +507,8 @@ export function finishNode < T extends ESTree.Node > (
               column: lastColumn
           }
       };
+
+      if (sourceFile) node.loc.source = sourceFile;
   }
 
   return node as T;
