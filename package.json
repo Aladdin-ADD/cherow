@@ -28,6 +28,7 @@
 		"typescript": "^2.9.2"
 	},
 	"scripts": {
+		"prebench": "lerna run build",
 		"bench": "node --allow-natives-syntax bench/bench.js 100",
 		"commit": "git-cz"
 	},
