@@ -54,6 +54,7 @@
     "build:watch": "tsc -w",
     "fuzz": "eslump ./test/fuzz/cherow.js .fuzz-output/",
     "lint": "cross-env tslint -p tsconfig.json -t stylish",
+    "prettier": "node ./scripts/prettier.js",
     "bundle": "cross-env rimraf dist && node scripts/bundle.js",
     "test": "cross-env TS_NODE_PROJECT=\"test/tsconfig.json\" mocha test/**/*.ts -c -R progress -r ts-node/register -r source-map-support/register --recursive --globals expect",
     "test:watch": "npm run test -- --watch --watch-extensions ts",
@@ -70,9 +71,12 @@
     "coveralls": "^3.0.2",
     "cross-env": "^5.2.0",
     "eslump": "^2.0.0",
+    "husky": "^1.2.1",
+    "lint-staged": "^8.1.0",
     "mocha": "^5.2.0",
     "nyc": "^13.1.0",
     "path": "^0.12.7",
+    "prettier": "^1.15.3",
     "rimraf": "^2.6.2",
     "rollup": "^0.67.4",
     "rollup-plugin-replace": "^2.1.0",
@@ -86,5 +90,16 @@
     "typescript": "^3.2.2",
     "unexpected": "^10.39.2",
     "unicode-11.0.0": "^0.7.8"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "**/*.{js,ts,tsx,json,jsx}": [
+      "prettier --write",
+      "git add"
+    ]
   }
 }
