@@ -61,7 +61,7 @@ files.forEach(file => {
           console.log(
             '\n' +
               chalk.red(`  This project uses prettier to format all ts/js code.\n`) +
-              chalk.dim(`    Please run `) +
+              chalk.dim(`  Please run `) +
               chalk.reset('npm run prettier') +
               chalk.dim(` and add changes to files listed below to your commit:`) +
               `\n\n`
