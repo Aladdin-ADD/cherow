@@ -3,7 +3,7 @@ import * as ESTree from './estree';
 import { OnComment, OnToken, pushComment, pushToken, Context, createScope, ScopeType } from './common';
 import { skipHashBang } from './scanner';
 import { report, Errors } from './errors';
-
+import { env } from './env';
 /**
  * `ECMAScript version
  */
@@ -166,6 +166,10 @@ export function parseSource(source: string, options: Options | void, context: Co
  * @param options parser options
  */
 export function parse(source: string, options?: Options): ESTree.Program {
+  if (env.extensible) {
+    // TODO: return an extensible parse -- it will be excluded in non-extendable version by rollup building.
+    return parseModule(source);
+  }
   return options && options.module ? parseModule(source, options) : parseScript(source, options);
 }
 
