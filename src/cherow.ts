@@ -167,7 +167,7 @@ export function parseSource(source: string, options: Options | void, context: Co
  */
 export function parse(source: string, options?: Options): ESTree.Program {
   if (env.extensible) {
-    // TODO: return an extensible parse -- it will be excluded in non-extendable version by rollup building.
+    // TODO: return an extensible parse -- it will be excluded in non-extendable version when building.
     return parseModule(source);
   }
   return options && options.module ? parseModule(source, options) : parseScript(source, options);
