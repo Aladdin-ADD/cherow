@@ -1203,7 +1203,7 @@ function parseNewExpression(state: ParserState, context: Context): ESTree.NewExp
     report(state, Errors.InvalidUnaryWithNew, KeywordDescTable[state.token & Token.Type]);
   }
   const callee =
-    context & Context.OptionsNext && state.token === Token.ImportKeyword
+    state.token === Token.ImportKeyword
       ? parseCallImportOrMetaProperty(state, context, true)
       : secludeGrammarWithLocation(state, context, start, line, column, parseMemberExpressionOrHigher);
 
@@ -2355,7 +2355,7 @@ export function parseRegExpLiteral(state: ParserState, context: Context): ESTree
 }
 
 /**
- * Parses BigInt literal (stage 3 proposal)
+ * Parses BigInt literal (stage 4 proposal)
  *
  * @see [Link](https://tc39.github.io/proposal-bigint/)
  *

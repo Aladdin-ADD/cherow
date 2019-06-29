@@ -29,9 +29,7 @@ A very fast and lightweight, standards-compliant, self-hosted javascript parser 
 
 `Stage 3` features support. These need to be enabled with the `next` option.
 
-* [Import()](https://github.com/tc39/proposal-dynamic-import)
 * [Hashbang Grammar](https://github.com/tc39/proposal-hashbang)
-* [BigInt](https://github.com/tc39/proposal-bigint)
 * [Import.meta](https://github.com/tc39/proposal-import-meta)
 
 ## API
